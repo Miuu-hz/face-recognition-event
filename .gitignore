@@ -1,0 +1,8 @@
+*.pyc
+__pycache__/
+database.db
+static/qr_*.png
+venv/
+.env
+client_secrets.json
+*.db

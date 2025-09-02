@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select or Paste Folder Link</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        ul { list-style-type: none; padding: 0; }
+        li { background-color: #f0f0f0; margin-bottom: 5px; padding: 10px; border-radius: 5px; }
+        a { text-decoration: none; color: #333; font-weight: bold; }
+        .paste-section { margin-top: 2em; padding-top: 1em; border-top: 2px solid #ccc; }
+        .paste-section input { width: 400px; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Select a Folder for '{{ event_name }}'</h1>
+
+    <h3>Option 1: Choose from your folders</h3>
+    <ul>
+        {% if folders %}
+            {% for folder in folders %}
+                <li>
+                    <a href="{{ url_for('set_folder', event_id=event_id, folder_id=folder.id) }}">
+                        📁 {{ folder.name }}
+                    </a>
+                </li>
+            {% endfor %}
+        {% else %}
+            <li>No folders found in your Google Drive.</li>
+        {% endif %}
+    </ul>
+
+    <div class="paste-section">
+        <h3>Option 2: Or paste a Google Drive folder link</h3>
+        <form action="{{ url_for('set_folder_from_link', event_id=event_id) }}" method="post">
+            <input type="url" name="folder_link" placeholder="https://drive.google.com/drive/folders/..." required>
+            <button type="submit">Use this Link</button>
+        </form>
+    </div>
+
+    <br>
+    <a href="{{ url_for('photographer_dashboard') }}">Back to Dashboard</a>
+</body>
+</html>

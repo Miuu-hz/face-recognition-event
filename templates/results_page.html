@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Photos</title>
+    <style>
+        :root {
+            --primary-brown: #8B4513;
+            --cream: #F5F5DC;
+            --soft-white: #FAF8F5;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--soft-white) 0%, var(--cream) 100%);
+            color: var(--primary-brown);
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .photo-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        .photo-card:hover {
+            transform: translateY(-5px);
+        }
+        .photo-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        .photo-card a.download-btn {
+            display: block;
+            text-align: center;
+            padding: 10px;
+            background: var(--primary-brown);
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .no-results {
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 We Found Your Photos!</h1>
+        {% if photo_links %}
+            <div class="results-grid">
+                {% for link in photo_links %}
+                    <div class="photo-card">
+                        <iframe src="{{ link.replace('/view', '/preview') }}" width="100%" height="250px" style="border:0;"></iframe>
+                        <a href="{{ link }}" target="_blank" class="download-btn">View & Download</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-results">
+                <p>😔 We couldn't find any photos with this face. Please try another photo.</p>
+            </div>
+        {% endif %}
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="{{ url_for('event_page', event_id=event_id) }}">Try another search</a>
+        </div>
+    </div>
+</body>
+</html>
