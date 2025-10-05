@@ -1,9 +1,9 @@
 services:
   - type: web
     name: face-recognition-event
-    runtime: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app"
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: SECRET_KEY
         generateValue: true
