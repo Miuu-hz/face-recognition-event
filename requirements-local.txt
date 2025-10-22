@@ -1,0 +1,32 @@
+# ============================================
+# Python Dependencies for Local Development
+# ============================================
+# ใช้สำหรับรันระบบบนเครื่อง local ด้วย localtunnel
+# ติดตั้งด้วย: pip install -r requirements-local.txt
+# ============================================
+
+# Web Framework
+Flask==2.3.2
+
+# Google Drive Integration
+google-auth==2.22.0
+google-auth-oauthlib==1.0.0
+google-auth-httplib2==0.1.0
+google-api-python-client==2.95.0
+
+# QR Code Generation
+qrcode==7.4.2
+Pillow==10.0.0
+
+# Face Recognition (ใช้ RAM เยอะ)
+# หมายเหตุ: การติดตั้งอาจใช้เวลา 5-10 นาที เนื่องจากต้อง compile dlib
+face-recognition==1.3.0
+numpy==1.24.3
+
+# Optional: สำหรับรัน production-like server
+# แนะนำให้ใช้ Flask development server สำหรับ local testing
+# gunicorn==21.2.0
+
+# Development Tools (Optional - uncomment ถ้าต้องการ)
+# python-dotenv==1.0.0  # สำหรับจัดการ environment variables
+# flask-cors==4.0.0     # สำหรับ CORS ถ้าต้องการ test กับ frontend แยก

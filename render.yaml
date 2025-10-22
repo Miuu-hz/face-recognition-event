@@ -1,11 +1,20 @@
-services:
-  - type: web
-    name: face-recognition-event
-    runtime: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    envVars:
-      - key: SECRET_KEY
-        generateValue: true
-      - key: ENV
-        value: production
+# ============================================
+# DISABLED - ไฟล์นี้ถูก disable ไว้ชั่วคราว
+# ============================================
+# ใช้สำหรับ deploy บน Render
+# ปัจจุบันใช้ localtunnel สำหรับ MVP แทน
+# เนื่องจากปัญหา RAM ของ Render Free Tier
+# ดูคู่มือการใช้งานใน SETUP_LOCAL.md
+# ============================================
+
+# services:
+#   - type: web
+#     name: face-recognition-event
+#     runtime: docker
+#     plan: free
+#     dockerfilePath: ./Dockerfile
+#     envVars:
+#       - key: SECRET_KEY
+#         generateValue: true
+#       - key: ENV
+#         value: production

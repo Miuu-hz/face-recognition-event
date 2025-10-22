@@ -1,19 +1,27 @@
-FROM python:3.9
+# ============================================
+# DISABLED - ไฟล์นี้ถูก disable ไว้ชั่วคราว
+# ============================================
+# ใช้สำหรับ deploy บน Render หรือ Cloud Platform
+# ปัจจุบันใช้ localtunnel สำหรับ MVP แทน
+# ดูคู่มือการใช้งานใน SETUP_LOCAL.md
+# ============================================
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    libopenblas-dev \
-    liblapack-dev \
-    libjpeg-dev \
-    libpng-dev
+# FROM python:3.9
 
-WORKDIR /app
+# RUN apt-get update && apt-get install -y \
+#     build-essential \
+#     cmake \
+#     libopenblas-dev \
+#     liblapack-dev \
+#     libjpeg-dev \
+#     libpng-dev
 
-COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# WORKDIR /app
 
-COPY . .
+# COPY requirements.txt .
+# RUN pip install --upgrade pip
+# RUN pip install -r requirements.txt
 
-CMD ["python", "-m", "gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
+# COPY . .
+
+# CMD ["python", "-m", "gunicorn", "--bind", "0.0.0.0:10000", "app:app"]

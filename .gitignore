@@ -1,8 +1,53 @@
+# Python
 *.pyc
 __pycache__/
-database.db
-static/qr_*.png
+*.py[cod]
+*$py.class
+
+# Virtual Environment
 venv/
-.env
-client_secrets.json
+env/
+ENV/
+.venv
+
+# Database
+database.db
 *.db
+*.sqlite
+*.sqlite3
+
+# Environment Variables
+.env
+.env.local
+
+# Google OAuth Credentials (SENSITIVE!)
+client_secrets.json
+credentials.json
+
+# Static Files
+static/qr_*.png
+
+# Logs (from start.sh and general)
+*.log
+flask.log
+lt.log
+
+# Node modules (if localtunnel installed locally)
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+temp/
+tmp/
