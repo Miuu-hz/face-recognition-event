@@ -60,14 +60,25 @@ chmod +x start.sh
 
 ## คุณสมบัติหลัก
 
+### 🎯 Core Features
 - ✅ สร้าง Event และ QR Code อัตโนมัติ
 - ✅ เชื่อมต่อ Google Drive สำหรับเก็บรูปภาพ
 - ✅ Face Recognition & Indexing อัตโนมัติ
 - ✅ ค้นหารูปด้วยการอัพโหลดเซลฟี่
 - ✅ รองรับการอัพโหลดหลายรูปเพื่อความแม่นยำ
+
+### ⚡ Performance & Reliability
 - ⚡ **Auto-detect GPU/CPU** - ใช้ GPU อัตโนมัติถ้ามี (เร็วกว่า 3-10 เท่า)
 - 🔄 **Background Task Processing** - Indexing ทำงาน background ไม่บล็อก UI
 - 📊 **Real-time Progress Tracking** - ติดตามความคืบหน้าผ่าน API
+- 🔁 **Auto-retry Failed Operations** - Retry อัตโนมัติสำหรับ network errors
+- 🛡️ **Robust Error Handling** - ทำงานต่อได้แม้บางรูปมีปัญหา
+
+### 🔧 Development & Operations
+- 📝 **Structured Logging** - บันทึก log แบบมีโครงสร้างใน `logs/`
+- ✅ **Input Validation** - ตรวจสอบข้อมูลก่อนประมวลผล
+- ⚙️ **Environment-based Config** - ตั้งค่าผ่าน `.env` file
+- 🔍 **Detailed Error Messages** - แสดง error ละเอียดเพื่อ debug ง่าย
 
 ## โครงสร้างโปรเจค
 
@@ -191,6 +202,63 @@ Response เหมือนกับข้างบน
 - `completed`: เสร็จสมบูรณ์
 - `failed`: ล้มเหลว (ดู error field)
 
+## Error Handling & Logging
+
+### 📋 Structured Logging
+
+ระบบบันทึก log แบบมีโครงสร้าง:
+
+```
+logs/
+├── app.log      # All logs (DEBUG level)
+└── error.log    # Errors only (ERROR level)
+```
+
+**Log Format:**
+```
+[2025-11-05 10:30:15] INFO [app:660] - Starting Face Indexing for Event: abc-123
+```
+
+**Log Levels:**
+- `DEBUG`: Development mode - รายละเอียดทุกอย่าง
+- `INFO`: Production mode - ข้อมูลสำคัญ
+- `WARNING`: คำเตือน - อาจมีปัญหา
+- `ERROR`: ข้อผิดพลาด - ต้องแก้ไข
+
+### 🔄 Error Recovery
+
+**Retry Logic:**
+- Download failures: Retry 3 times with exponential backoff (1s, 2s, 4s)
+- Continue processing if individual photos fail
+- Clean up temp files even on errors
+
+**Custom Exceptions:**
+- `ImageProcessingError`: รูปภาพเสียหรือประมวลผลไม่ได้
+- `GoogleDriveError`: Google Drive API ล้มเหลว
+- `ValidationError`: ข้อมูล input ไม่ถูกต้อง
+- `DatabaseError`: Database operation ล้มเหลว
+
+**Input Validation:**
+- Event ID: ต้องเป็น UUID format
+- Folder ID: ต้องมีความยาว 10-100 ตัวอักษร
+- Image files: รองรับเฉพาะ jpg, jpeg, png, gif
+
+### 📊 Monitoring Logs
+
+```bash
+# ดู log แบบ real-time
+tail -f logs/app.log
+
+# ดู errors อย่างเดียว
+tail -f logs/error.log
+
+# ค้นหา errors
+grep ERROR logs/app.log
+
+# ดู task specific logs
+grep "task.abc-123" logs/app.log
+```
+
 ## การแก้ปัญหา
 
 ### RAM ใช้งานเยอะเกินไป
@@ -207,6 +275,12 @@ Response เหมือนกับข้างบน
 - แก้ไข `SUBDOMAIN` ใน `start.sh`
 - หรือใช้ ngrok แทน
 
+### ตรวจสอบ Errors
+1. ดู `logs/error.log` สำหรับ errors ล่าสุด
+2. ตรวจสอบ stack trace สำหรับรายละเอียด
+3. ดู task status ผ่าน API `/api/task/<task_id>`
+4. ตรวจสอบ Google Drive permissions
+
 ## คู่มือเพิ่มเติม
 
 📖 **คู่มือติดตั้งแบบละเอียด:** [SETUP_LOCAL.md](SETUP_LOCAL.md)
@@ -218,17 +292,30 @@ Response เหมือนกับข้างบน
 
 ## Roadmap
 
+### ✅ Completed (Phase 1 - CRITICAL)
 - [x] Background task processing ✅
 - [x] Progress tracking API ✅
 - [x] Environment configuration ✅
 - [x] GPU/CPU auto-detection ✅
+- [x] Error handling & logging system ✅
+- [x] Input validation ✅
+
+### 🔄 In Progress (Phase 2 - HIGH PRIORITY)
 - [ ] Frontend real-time progress UI
-- [ ] Error handling & logging system
-- [ ] Input validation & security
+- [ ] Advanced error handling for edge cases
+- [ ] Security improvements (rate limiting, CSRF protection)
+
+### 📋 Planned (Phase 3 - MEDIUM)
 - [ ] PostgreSQL support
-- [ ] เพิ่ม caching สำหรับ face encodings
-- [ ] ใช้ vector database (Milvus/Faiss)
+- [ ] Performance optimization (caching encodings)
+- [ ] Resume interrupted indexing
+- [ ] Batch photo upload improvements
+
+### 💡 Future (Phase 4 - NICE TO HAVE)
+- [ ] Vector database integration (Milvus/Faiss)
 - [ ] Support multiple events พร้อมกัน
+- [ ] Advanced face clustering
+- [ ] Photo quality detection
 
 ## License
 
