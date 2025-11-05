@@ -16,9 +16,13 @@ database.db
 *.sqlite
 *.sqlite3
 
-# Environment Variables
+# Environment Variables (CRITICAL - Never commit!)
 .env
 .env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
 
 # Google OAuth Credentials (SENSITIVE!)
 client_secrets.json

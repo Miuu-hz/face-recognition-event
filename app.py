@@ -1,3 +1,10 @@
+"""
+Face Recognition Event System
+
+A Flask-based web application for event photography management with
+AI-powered face recognition for easy photo discovery.
+"""
+
 import os
 import uuid
 import qrcode
@@ -10,7 +17,6 @@ import face_recognition
 import tempfile
 from PIL import Image
 
-
 from flask import Flask, redirect, request, session, url_for, render_template, jsonify, g
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -18,11 +24,31 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.http import MediaIoBaseDownload
 
-app = Flask(__name__)
-app.secret_key = 'your_super_secret_key_change_this'
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# Import configuration
+from config import get_config, ConfigError
 
-DATABASE = 'database.db'
+# ============================================
+# Flask App Initialization
+# ============================================
+
+app = Flask(__name__)
+
+# Load configuration based on environment
+try:
+    Config = get_config()
+    Config.init_app(app)
+except ConfigError as e:
+    print(f"\n{'='*60}")
+    print("CONFIGURATION ERROR")
+    print(f"{'='*60}")
+    print(str(e))
+    print(f"{'='*60}\n")
+    print("Please check your .env file and environment variables.")
+    print("See .env.example for reference.\n")
+    exit(1)
+
+# Database path from config
+DATABASE = Config.DATABASE_PATH
 
 # ============================================
 # GPU/CPU Detection and Configuration
@@ -59,25 +85,35 @@ def detect_gpu_availability():
 def get_optimal_face_recognition_config():
     """
     กำหนด config ที่เหมาะสมตามฮาร์ดแวร์ที่มี
-    Returns: dict ของ config
+    Uses values from environment variables (Config class)
+
+    Returns:
+        dict: Face recognition configuration
     """
     has_gpu = detect_gpu_availability()
 
-    # ตัวเลือกการตั้งค่า
+    # Get model setting from config
+    model_config = Config.FACE_MODEL.lower()
+
+    # Determine model based on setting
+    if model_config == 'auto':
+        # Auto-detect based on GPU availability
+        model = 'cnn' if has_gpu else 'hog'
+    elif model_config in ['hog', 'cnn']:
+        # Use specified model
+        model = model_config
+    else:
+        # Default to hog if invalid
+        print(f"Warning: Invalid FACE_MODEL '{Config.FACE_MODEL}', defaulting to 'hog'")
+        model = 'hog'
+
+    # Build configuration dictionary
     config = {
-        'tolerance': 0.5,  # ค่า 0.4-0.6 เหมาะสม (ยิ่งน้อยยิ่งเข้มงวด)
-        'batch_size': 20,  # จำนวนรูปต่อ batch
-
-        # Auto-detect model based on GPU availability
-        'model': 'cnn' if has_gpu else 'hog',
-
-        # Manual override (ถ้าต้องการบังคับใช้ model ใดๆ uncomment บรรทัดด้านล่าง)
-        # 'model': 'hog',  # บังคับใช้ CPU (เร็ว, RAM น้อย)
-        # 'model': 'cnn',  # บังคับใช้ CNN (แม่นยำกว่า, ต้องการ GPU หรือ CPU แรงๆ)
-
-        # GPU specific settings
-        'use_gpu': has_gpu,
-        'num_jitters': 1 if has_gpu else 1,  # จำนวนครั้งที่ sample รูปเพื่อเพิ่มความแม่นยำ
+        'tolerance': Config.FACE_TOLERANCE,
+        'batch_size': Config.BATCH_SIZE,
+        'model': model,
+        'use_gpu': has_gpu and (model == 'cnn'),
+        'num_jitters': Config.NUM_JITTERS,
     }
 
     # แสดงข้อมูล config
@@ -86,6 +122,7 @@ def get_optimal_face_recognition_config():
     print("="*50)
     print(f"Device:       {'GPU (CUDA)' if config['use_gpu'] else 'CPU'}")
     print(f"Model:        {config['model'].upper()} ({'CNN - High Accuracy' if config['model'] == 'cnn' else 'HOG - Fast Processing'})")
+    print(f"  (Setting: {Config.FACE_MODEL})")
     print(f"Tolerance:    {config['tolerance']} (lower = stricter)")
     print(f"Batch Size:   {config['batch_size']} images")
     print(f"Num Jitters:  {config['num_jitters']}")
@@ -419,19 +456,37 @@ def event_page(event_id):
 
 @app.route('/login_temp')
 def login_temp():
-    CLIENT_SECRETS_FILE = "client_secrets.json"
-    SCOPES = ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/cloud-platform']
-    flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, redirect_uri=url_for('callback_temp', _external=True))
-    authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
+    """Initialize Google OAuth flow"""
+    SCOPES = [
+        'https://www.googleapis.com/auth/drive.readonly',
+        'https://www.googleapis.com/auth/cloud-platform'
+    ]
+    flow = Flow.from_client_secrets_file(
+        Config.GOOGLE_CLIENT_SECRETS,
+        scopes=SCOPES,
+        redirect_uri=url_for('callback_temp', _external=True)
+    )
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true'
+    )
     session['state'] = state
     return redirect(authorization_url)
 
 @app.route('/callback_temp')
 def callback_temp():
-    CLIENT_SECRETS_FILE = "client_secrets.json"
-    SCOPES = ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/cloud-platform']
+    """Handle Google OAuth callback"""
+    SCOPES = [
+        'https://www.googleapis.com/auth/drive.readonly',
+        'https://www.googleapis.com/auth/cloud-platform'
+    ]
     state = session['state']
-    flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, state=state, redirect_uri=url_for('callback_temp', _external=True))
+    flow = Flow.from_client_secrets_file(
+        Config.GOOGLE_CLIENT_SECRETS,
+        scopes=SCOPES,
+        state=state,
+        redirect_uri=url_for('callback_temp', _external=True)
+    )
     flow.fetch_token(authorization_response=request.url)
     credentials = flow.credentials
     session['credentials'] = {'token': credentials.token, 'refresh_token': credentials.refresh_token, 'token_uri': credentials.token_uri, 'client_id': credentials.client_id, 'client_secret': credentials.client_secret, 'scopes': credentials.scopes}
@@ -547,4 +602,9 @@ def search_faces(event_id):
                 pass
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=10000)
+    # Run Flask development server
+    app.run(
+        debug=Config.DEBUG,
+        host=Config.HOST,
+        port=Config.PORT
+    )
