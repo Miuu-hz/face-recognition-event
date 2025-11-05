@@ -8,7 +8,6 @@ import json
 import numpy as np
 import face_recognition
 import tempfile
-import face_recognition
 from PIL import Image
 
 
@@ -24,11 +23,78 @@ app.secret_key = 'your_super_secret_key_change_this'
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 DATABASE = 'database.db'
-FACE_RECOGNITION_CONFIG = {
-    'tolerance': 0.5,  # ค่า 0.4-0.6 เหมาะสม (ยิ่งน้อยยิ่งเข้มงวด)
-    'model': 'hog',  # 'hog' = เร็ว, 'cnn' = แม่นยำ (ต้องการ GPU)
-    'batch_size': 20,  # จำนวนรูปต่อ batch
-}
+
+# ============================================
+# GPU/CPU Detection and Configuration
+# ============================================
+
+def detect_gpu_availability():
+    """
+    ตรวจสอบว่ามี GPU (CUDA) ให้ใช้งานหรือไม่
+    Returns: True ถ้ามี GPU, False ถ้าไม่มี
+    """
+    try:
+        import torch
+        if torch.cuda.is_available():
+            print(f"✓ GPU detected: {torch.cuda.get_device_name(0)}")
+            return True
+        else:
+            print("○ No GPU detected, using CPU")
+            return False
+    except ImportError:
+        # ถ้าไม่มี PyTorch ลองเช็คด้วยวิธีอื่น
+        try:
+            # เช็คว่า dlib ถูก compile ด้วย CUDA support หรือไม่
+            import dlib
+            if dlib.DLIB_USE_CUDA:
+                print("✓ GPU detected: dlib with CUDA support")
+                return True
+            else:
+                print("○ dlib without CUDA support, using CPU")
+                return False
+        except (ImportError, AttributeError):
+            print("○ No GPU detection available, defaulting to CPU")
+            return False
+
+def get_optimal_face_recognition_config():
+    """
+    กำหนด config ที่เหมาะสมตามฮาร์ดแวร์ที่มี
+    Returns: dict ของ config
+    """
+    has_gpu = detect_gpu_availability()
+
+    # ตัวเลือกการตั้งค่า
+    config = {
+        'tolerance': 0.5,  # ค่า 0.4-0.6 เหมาะสม (ยิ่งน้อยยิ่งเข้มงวด)
+        'batch_size': 20,  # จำนวนรูปต่อ batch
+
+        # Auto-detect model based on GPU availability
+        'model': 'cnn' if has_gpu else 'hog',
+
+        # Manual override (ถ้าต้องการบังคับใช้ model ใดๆ uncomment บรรทัดด้านล่าง)
+        # 'model': 'hog',  # บังคับใช้ CPU (เร็ว, RAM น้อย)
+        # 'model': 'cnn',  # บังคับใช้ CNN (แม่นยำกว่า, ต้องการ GPU หรือ CPU แรงๆ)
+
+        # GPU specific settings
+        'use_gpu': has_gpu,
+        'num_jitters': 1 if has_gpu else 1,  # จำนวนครั้งที่ sample รูปเพื่อเพิ่มความแม่นยำ
+    }
+
+    # แสดงข้อมูล config
+    print("\n" + "="*50)
+    print("Face Recognition Configuration:")
+    print("="*50)
+    print(f"Device:       {'GPU (CUDA)' if config['use_gpu'] else 'CPU'}")
+    print(f"Model:        {config['model'].upper()} ({'CNN - High Accuracy' if config['model'] == 'cnn' else 'HOG - Fast Processing'})")
+    print(f"Tolerance:    {config['tolerance']} (lower = stricter)")
+    print(f"Batch Size:   {config['batch_size']} images")
+    print(f"Num Jitters:  {config['num_jitters']}")
+    print("="*50 + "\n")
+
+    return config
+
+# สร้าง config อัตโนมัติตอน startup
+FACE_RECOGNITION_CONFIG = get_optimal_face_recognition_config()
 
 # --- ฟังก์ชันจัดการฐานข้อมูล (ฉบับสมบูรณ์) ---
 def get_db():
@@ -87,12 +153,26 @@ def download_image_temp(drive_service, photo_id):
         return None
 
 def extract_face_encodings(image_path):
-    """Extract face encodings from an image"""
+    """
+    Extract face encodings from an image
+    ใช้ config ที่ detect GPU/CPU อัตโนมัติ
+    """
     try:
         image = face_recognition.load_image_file(image_path)
-        face_locations = face_recognition.face_locations(image, model=FACE_RECOGNITION_CONFIG['model'])
-        face_encodings = face_recognition.face_encodings(image, face_locations)
-        
+
+        # ใช้ model ที่เหมาะสมตาม GPU/CPU
+        face_locations = face_recognition.face_locations(
+            image,
+            model=FACE_RECOGNITION_CONFIG['model']
+        )
+
+        # ใช้ num_jitters สำหรับความแม่นยำ (GPU จะใช้ค่าสูงกว่า)
+        face_encodings = face_recognition.face_encodings(
+            image,
+            face_locations,
+            num_jitters=FACE_RECOGNITION_CONFIG['num_jitters']
+        )
+
         results = []
         for location, encoding in zip(face_locations, face_encodings):
             results.append({

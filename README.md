@@ -51,6 +51,7 @@ chmod +x start.sh
 - ✅ Face Recognition & Indexing อัตโนมัติ
 - ✅ ค้นหารูปด้วยการอัพโหลดเซลฟี่
 - ✅ รองรับการอัพโหลดหลายรูปเพื่อความแม่นยำ
+- ⚡ **Auto-detect GPU/CPU** - ใช้ GPU อัตโนมัติถ้ามี (เร็วกว่า 3-10 เท่า)
 
 ## โครงสร้างโปรเจค
 
@@ -96,15 +97,48 @@ face-recognition-event/
 
 ## Configuration
 
-แก้ไขค่าใน `app.py`:
+### ⚡ GPU/CPU Auto-Detection
+
+ระบบจะตรวจสอบและใช้ GPU อัตโนมัติ! เมื่อรัน server จะเห็นข้อความแบบนี้:
+
+```
+==================================================
+Face Recognition Configuration:
+==================================================
+Device:       GPU (CUDA)
+Model:        CNN (CNN - High Accuracy)
+Tolerance:    0.5 (lower = stricter)
+Batch Size:   20 images
+Num Jitters:  1
+==================================================
+```
+
+### การตั้งค่า Manual
+
+แก้ไขใน `app.py` บรรทัด 67-81:
 
 ```python
-FACE_RECOGNITION_CONFIG = {
+config = {
     'tolerance': 0.5,    # 0.4-0.6 (ยิ่งน้อยยิ่งเข้มงวด)
-    'model': 'hog',      # 'hog' = เร็ว, 'cnn' = แม่นยำ
     'batch_size': 20,    # จำนวนรูปต่อ batch
+
+    # Auto-detect (default)
+    'model': 'cnn' if has_gpu else 'hog',
+
+    # หรือบังคับเลือก:
+    # 'model': 'hog',  # บังคับใช้ CPU (เร็ว, RAM น้อย)
+    # 'model': 'cnn',  # บังคับใช้ CNN (แม่นยำ, ต้องการ GPU)
 }
 ```
+
+### เปรียบเทียบ CPU vs GPU
+
+| | CPU (HOG) | GPU (CNN) |
+|---|---|---|
+| **ความเร็ว** | เร็ว | เร็วมาก (3-10x) |
+| **ความแม่นยำ** | ดี | ดีเยี่ยม |
+| **RAM** | น้อย (~2GB) | ปานกลาง (~4GB) |
+| **ต้องการ GPU** | ❌ | ✅ |
 
 ## การแก้ปัญหา
 
