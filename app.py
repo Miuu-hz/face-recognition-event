@@ -15,9 +15,11 @@ import json
 import numpy as np
 import face_recognition
 import tempfile
+from datetime import datetime
 from PIL import Image
 
 from flask import Flask, redirect, request, session, url_for, render_template, jsonify, g
+from flask_executor import Executor
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -49,6 +51,12 @@ except ConfigError as e:
 
 # Database path from config
 DATABASE = Config.DATABASE_PATH
+
+# ============================================
+# Background Task Executor
+# ============================================
+
+executor = Executor(app)
 
 # ============================================
 # GPU/CPU Detection and Configuration
@@ -235,6 +243,135 @@ def create_average_encoding(encodings):
     else:
         return np.mean(encodings, axis=0)
 
+# ============================================
+# Background Task Management
+# ============================================
+
+def create_task(event_id, task_type='indexing'):
+    """
+    Create a new background task
+
+    Args:
+        event_id: Event ID
+        task_type: Type of task (default: 'indexing')
+
+    Returns:
+        str: Task ID
+    """
+    task_id = str(uuid.uuid4())
+    db = get_db()
+    db.execute(
+        'INSERT INTO tasks (id, event_id, task_type, status, created_at) VALUES (?, ?, ?, ?, ?)',
+        (task_id, event_id, task_type, 'pending', datetime.now())
+    )
+    db.commit()
+    return task_id
+
+def update_task_status(task_id, status, progress=None, total=None, current_item=None, error=None):
+    """
+    Update task status
+
+    Args:
+        task_id: Task ID
+        status: New status ('pending', 'running', 'completed', 'failed')
+        progress: Current progress count
+        total: Total items to process
+        current_item: Current item being processed
+        error: Error message if failed
+    """
+    db = get_db()
+
+    updates = ['status = ?']
+    params = [status]
+
+    if progress is not None:
+        updates.append('progress = ?')
+        params.append(progress)
+
+    if total is not None:
+        updates.append('total = ?')
+        params.append(total)
+
+    if current_item is not None:
+        updates.append('current_item = ?')
+        params.append(current_item)
+
+    if error is not None:
+        updates.append('error = ?')
+        params.append(error)
+
+    if status == 'running' and progress == 0:
+        updates.append('started_at = ?')
+        params.append(datetime.now())
+
+    if status in ['completed', 'failed']:
+        updates.append('completed_at = ?')
+        params.append(datetime.now())
+
+    params.append(task_id)
+
+    query = f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?"
+    db.execute(query, params)
+    db.commit()
+
+def get_task_status(task_id):
+    """
+    Get task status
+
+    Args:
+        task_id: Task ID
+
+    Returns:
+        dict: Task information or None if not found
+    """
+    db = get_db()
+    task = db.execute('SELECT * FROM tasks WHERE id = ?', (task_id,)).fetchone()
+
+    if task is None:
+        return None
+
+    return {
+        'id': task['id'],
+        'event_id': task['event_id'],
+        'task_type': task['task_type'],
+        'status': task['status'],
+        'progress': task['progress'],
+        'total': task['total'],
+        'current_item': task['current_item'],
+        'error': task['error'],
+        'started_at': task['started_at'],
+        'completed_at': task['completed_at'],
+        'created_at': task['created_at'],
+    }
+
+def get_event_latest_task(event_id):
+    """
+    Get latest task for an event
+
+    Args:
+        event_id: Event ID
+
+    Returns:
+        dict: Task information or None
+    """
+    db = get_db()
+    task = db.execute(
+        'SELECT * FROM tasks WHERE event_id = ? ORDER BY created_at DESC LIMIT 1',
+        (event_id,)
+    ).fetchone()
+
+    if task is None:
+        return None
+
+    return {
+        'id': task['id'],
+        'status': task['status'],
+        'progress': task['progress'],
+        'total': task['total'],
+        'current_item': task['current_item'],
+        'error': task['error'],
+    }
+
 @app.cli.command('init-db')
 def init_db_command():
     """Clears the existing data and creates new tables."""
@@ -275,104 +412,129 @@ def create_event():
     db.commit()
     return redirect(url_for('photographer_dashboard'))
 
-@app.route('/start_indexing/<event_id>')
-def start_indexing(event_id):
-    db = get_db()
-    event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
+    """
+    Background task for face indexing
 
-    if not event_data or 'credentials' not in session:
-        return redirect(url_for('photographer_dashboard'))
+    Args:
+        event_id: Event ID
+        task_id: Task ID for tracking
+        credentials_dict: Google OAuth credentials dictionary
+        folder_id: Google Drive folder ID
+    """
+    # Create new database connection for background thread
+    db_conn = sqlite3.connect(DATABASE)
+    db_conn.row_factory = sqlite3.Row
 
-    # Update status to In Progress
-    db.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('In Progress', event_id))
-    db.commit()
-    
-    folder_id = event_data['drive_folder_id']
-    creds = Credentials(**session['credentials'])
-    drive_service = build('drive', 'v3', credentials=creds)
-    
-    print(f"--- Starting Face Indexing for Event: {event_data['name']} ---")
-    
     indexed_photos = 0
     total_faces = 0
-    temp_files = []  # Track temp files for cleanup
-    
+    temp_files = []
+
     try:
+        # Update task to running
+        update_task_status(task_id, 'running', progress=0, total=0)
+
+        # Build Google Drive service
+        creds = Credentials(**credentials_dict)
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        print(f"[Task {task_id}] Starting Face Indexing for Event: {event_id}")
+
         # Get all images from the folder
         query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
         results = drive_service.files().list(
-            q=query, 
+            q=query,
             fields="files(id, name)",
-            pageSize=100  # Adjust as needed
+            pageSize=100
         ).execute()
         photos = results.get('files', [])
-        
-        print(f"Found {len(photos)} photos to process")
-        
+
+        total_photos = len(photos)
+        print(f"[Task {task_id}] Found {total_photos} photos to process")
+
+        # Update task with total
+        update_task_status(task_id, 'running', progress=0, total=total_photos)
+        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('In Progress', event_id))
+        db_conn.commit()
+
         # Process photos in batches
         batch_size = FACE_RECOGNITION_CONFIG['batch_size']
         for i in range(0, len(photos), batch_size):
             batch = photos[i:i+batch_size]
-            print(f"Processing batch {i//batch_size + 1} ({len(batch)} photos)...")
-            
+            print(f"[Task {task_id}] Processing batch {i//batch_size + 1} ({len(batch)} photos)...")
+
             for photo in batch:
                 photo_id = photo['id']
                 photo_name = photo['name']
-                print(f"  Processing: {photo_name}")
-                
+                print(f"[Task {task_id}]   Processing: {photo_name}")
+
+                # Update current item
+                update_task_status(
+                    task_id,
+                    'running',
+                    progress=indexed_photos,
+                    current_item=photo_name
+                )
+
                 # Download image to temp file
                 temp_path = download_image_temp(drive_service, photo_id)
                 if not temp_path:
                     continue
-                    
+
                 temp_files.append(temp_path)
-                
+
                 # Extract face encodings
                 faces = extract_face_encodings(temp_path)
-                
+
                 if faces:
-                    print(f"    Found {len(faces)} faces")
+                    print(f"[Task {task_id}]     Found {len(faces)} faces")
                     for face_data in faces:
                         # Convert encoding to blob for storage
                         encoding_blob = face_data['encoding'].tobytes()
                         location_json = json.dumps(face_data['location'])
-                        
+
                         # Save to database
-                        db.execute(
+                        db_conn.execute(
                             'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
                             (event_id, photo_id, photo_name, encoding_blob, location_json)
                         )
                         total_faces += 1
                 else:
-                    print(f"    No faces found")
-                
+                    print(f"[Task {task_id}]     No faces found")
+
                 indexed_photos += 1
-                
-                # Update progress (optional - for real-time updates)
-                db.execute(
+
+                # Update progress in events table
+                db_conn.execute(
                     "UPDATE events SET indexed_photos = ?, total_faces = ? WHERE id = ?",
                     (indexed_photos, total_faces, event_id)
                 )
-                db.commit()
-                
+                db_conn.commit()
+
         # Update final status
-        db.execute(
+        db_conn.execute(
             "UPDATE events SET indexing_status = ?, indexed_photos = ?, total_faces = ? WHERE id = ?",
             ('Completed', indexed_photos, total_faces, event_id)
         )
-        db.commit()
-        print(f"--- Indexing completed. Photos: {indexed_photos}, Faces: {total_faces} ---")
-        
+        db_conn.commit()
+
+        update_task_status(task_id, 'completed', progress=indexed_photos, total=total_photos)
+        print(f"[Task {task_id}] Completed. Photos: {indexed_photos}, Faces: {total_faces}")
+
     except HttpError as error:
-        print(f'An error occurred: {error}')
-        db.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-        db.commit()
-        
+        error_msg = f'Google Drive API error: {error}'
+        print(f"[Task {task_id}] {error_msg}")
+        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+        db_conn.commit()
+        update_task_status(task_id, 'failed', error=error_msg)
+
     except Exception as e:
-        print(f'Unexpected error: {e}')
-        db.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-        db.commit()
-        
+        error_msg = f'Unexpected error: {str(e)}'
+        print(f"[Task {task_id}] {error_msg}")
+        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+        db_conn.commit()
+        update_task_status(task_id, 'failed', error=error_msg)
+
     finally:
         # Clean up temp files
         for temp_file in temp_files:
@@ -382,6 +544,34 @@ def start_indexing(event_id):
             except:
                 pass
 
+        # Close database connection
+        db_conn.close()
+
+@app.route('/start_indexing/<event_id>')
+def start_indexing(event_id):
+    """Start face indexing as a background task"""
+    db = get_db()
+    event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+
+    if not event_data or 'credentials' not in session:
+        return redirect(url_for('photographer_dashboard'))
+
+    folder_id = event_data['drive_folder_id']
+    if not folder_id:
+        return redirect(url_for('photographer_dashboard'))
+
+    # Create background task
+    task_id = create_task(event_id, 'indexing')
+
+    # Get credentials from session
+    credentials_dict = session['credentials']
+
+    # Submit task to background executor
+    executor.submit(run_face_indexing_task, event_id, task_id, credentials_dict, folder_id)
+
+    print(f"✓ Face indexing task created: {task_id} for event: {event_data['name']}")
+
+    # Redirect to dashboard (task runs in background)
     return redirect(url_for('photographer_dashboard'))
 
 @app.route('/delete_event/<event_id>', methods=['POST'])
@@ -600,6 +790,70 @@ def search_faces(event_id):
                     os.remove(temp_file)
             except:
                 pass
+
+# ============================================
+# API Endpoints for Task Status
+# ============================================
+
+@app.route('/api/task/<task_id>')
+def api_get_task_status(task_id):
+    """
+    Get task status by ID
+
+    Returns:
+        JSON: Task status information
+    """
+    task = get_task_status(task_id)
+
+    if task is None:
+        return jsonify({'error': 'Task not found'}), 404
+
+    # Calculate progress percentage
+    if task['total'] and task['total'] > 0:
+        progress_percent = int((task['progress'] / task['total']) * 100)
+    else:
+        progress_percent = 0
+
+    return jsonify({
+        'id': task['id'],
+        'status': task['status'],
+        'progress': task['progress'],
+        'total': task['total'],
+        'progress_percent': progress_percent,
+        'current_item': task['current_item'],
+        'error': task['error'],
+        'started_at': task['started_at'],
+        'completed_at': task['completed_at'],
+    })
+
+@app.route('/api/event/<event_id>/task')
+def api_get_event_task(event_id):
+    """
+    Get latest task for an event
+
+    Returns:
+        JSON: Task status information
+    """
+    task = get_event_latest_task(event_id)
+
+    if task is None:
+        return jsonify({'error': 'No task found for this event'}), 404
+
+    # Calculate progress percentage
+    if task['total'] and task['total'] > 0:
+        progress_percent = int((task['progress'] / task['total']) * 100)
+    else:
+        progress_percent = 0
+
+    return jsonify({
+        'id': task['id'],
+        'status': task['status'],
+        'progress': task['progress'],
+        'total': task['total'],
+        'progress_percent': progress_percent,
+        'current_item': task['current_item'],
+        'error': task['error'],
+    })
 
 if __name__ == '__main__':
     # Run Flask development server

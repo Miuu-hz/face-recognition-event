@@ -22,13 +22,27 @@ pip install -r requirements-local.txt
 npm install -g localtunnel
 ```
 
-### 2. Setup Database
+### 2. ตั้งค่า Environment Variables
+
+```bash
+# สร้างไฟล์ .env จาก template
+cp .env.example .env
+
+# สร้าง SECRET_KEY
+python -c "import secrets; print(secrets.token_hex(32))"
+# Copy output และใส่ใน .env
+
+# แก้ไข .env ตามต้องการ
+nano .env
+```
+
+### 3. Setup Database
 
 ```bash
 flask --app app init-db
 ```
 
-### 3. ตั้งค่า Google OAuth
+### 4. ตั้งค่า Google OAuth
 
 1. ไปที่ [Google Cloud Console](https://console.cloud.google.com/)
 2. สร้าง OAuth 2.0 credentials
@@ -52,6 +66,8 @@ chmod +x start.sh
 - ✅ ค้นหารูปด้วยการอัพโหลดเซลฟี่
 - ✅ รองรับการอัพโหลดหลายรูปเพื่อความแม่นยำ
 - ⚡ **Auto-detect GPU/CPU** - ใช้ GPU อัตโนมัติถ้ามี (เร็วกว่า 3-10 เท่า)
+- 🔄 **Background Task Processing** - Indexing ทำงาน background ไม่บล็อก UI
+- 📊 **Real-time Progress Tracking** - ติดตามความคืบหน้าผ่าน API
 
 ## โครงสร้างโปรเจค
 
@@ -140,6 +156,41 @@ config = {
 | **RAM** | น้อย (~2GB) | ปานกลาง (~4GB) |
 | **ต้องการ GPU** | ❌ | ✅ |
 
+## API Endpoints
+
+### Background Task Status
+
+#### ดู status ของ task
+```bash
+GET /api/task/<task_id>
+```
+
+Response:
+```json
+{
+  "id": "task-uuid",
+  "status": "running",
+  "progress": 15,
+  "total": 100,
+  "progress_percent": 15,
+  "current_item": "photo_name.jpg",
+  "error": null
+}
+```
+
+#### ดู task ล่าสุดของ event
+```bash
+GET /api/event/<event_id>/task
+```
+
+Response เหมือนกับข้างบน
+
+**Task Status Values:**
+- `pending`: รอเริ่มทำงาน
+- `running`: กำลังทำงาน
+- `completed`: เสร็จสมบูรณ์
+- `failed`: ล้มเหลว (ดู error field)
+
 ## การแก้ปัญหา
 
 ### RAM ใช้งานเยอะเกินไป
@@ -164,13 +215,19 @@ config = {
 
 - ⚠️ ใช้ Localtunnel (ไม่เสถียรเท่า production)
 - ⚠️ SQLite (ไม่เหมาะสำหรับ concurrent users เยอะ)
-- ⚠️ RAM usage สูงเมื่อ index รูปจำนวนมาก
 
 ## Roadmap
 
+- [x] Background task processing ✅
+- [x] Progress tracking API ✅
+- [x] Environment configuration ✅
+- [x] GPU/CPU auto-detection ✅
+- [ ] Frontend real-time progress UI
+- [ ] Error handling & logging system
+- [ ] Input validation & security
+- [ ] PostgreSQL support
 - [ ] เพิ่ม caching สำหรับ face encodings
 - [ ] ใช้ vector database (Milvus/Faiss)
-- [ ] Batch processing แบบ async
 - [ ] Support multiple events พร้อมกัน
 
 ## License
