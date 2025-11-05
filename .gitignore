@@ -35,6 +35,7 @@ static/qr_*.png
 *.log
 flask.log
 lt.log
+logs/
 
 # Node modules (if localtunnel installed locally)
 node_modules/

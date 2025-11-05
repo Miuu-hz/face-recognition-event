@@ -15,8 +15,12 @@ import json
 import numpy as np
 import face_recognition
 import tempfile
+import logging
+import traceback
+import time
 from datetime import datetime
 from PIL import Image
+from functools import wraps
 
 from flask import Flask, redirect, request, session, url_for, render_template, jsonify, g
 from flask_executor import Executor
@@ -53,6 +57,172 @@ except ConfigError as e:
 DATABASE = Config.DATABASE_PATH
 
 # ============================================
+# Logging Configuration
+# ============================================
+
+def setup_logging():
+    """Configure structured logging for the application"""
+    # Create logs directory if it doesn't exist
+    log_dir = 'logs'
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Configure logging format
+    log_format = logging.Formatter(
+        '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)d] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(log_format)
+
+    # File handler for all logs
+    file_handler = logging.FileHandler(os.path.join(log_dir, 'app.log'))
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(log_format)
+
+    # File handler for errors only
+    error_handler = logging.FileHandler(os.path.join(log_dir, 'error.log'))
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(log_format)
+
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG if Config.DEBUG else logging.INFO)
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(error_handler)
+
+    # Reduce noise from third-party libraries
+    logging.getLogger('googleapiclient').setLevel(logging.WARNING)
+    logging.getLogger('google.auth').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+
+    return logging.getLogger(__name__)
+
+# Initialize logging
+logger = setup_logging()
+logger.info("="*60)
+logger.info("Face Recognition Event System - Starting")
+logger.info("="*60)
+
+# ============================================
+# Custom Exceptions
+# ============================================
+
+class FaceRecognitionError(Exception):
+    """Base exception for face recognition errors"""
+    pass
+
+class ImageProcessingError(FaceRecognitionError):
+    """Error during image processing"""
+    pass
+
+class DatabaseError(Exception):
+    """Database operation error"""
+    pass
+
+class ValidationError(Exception):
+    """Input validation error"""
+    pass
+
+class GoogleDriveError(Exception):
+    """Google Drive API error"""
+    pass
+
+# ============================================
+# Error Handlers
+# ============================================
+
+@app.errorhandler(404)
+def not_found_error(error):
+    logger.warning(f"404 error: {request.url}")
+    return render_template('error.html', error_message="Page not found"), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"500 error: {error}", exc_info=True)
+    return render_template('error.html', error_message="Internal server error"), 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    logger.error(f"Unhandled exception: {error}", exc_info=True)
+    return render_template('error.html', error_message="An unexpected error occurred"), 500
+
+# ============================================
+# Utility Functions
+# ============================================
+
+def retry_on_error(max_retries=3, delay=1, backoff=2, exceptions=(Exception,)):
+    """
+    Decorator for retrying functions that may fail transiently
+
+    Args:
+        max_retries: Maximum number of retry attempts
+        delay: Initial delay between retries (seconds)
+        backoff: Multiplier for delay after each retry
+        exceptions: Tuple of exceptions to catch
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            _delay = delay
+            last_exception = None
+
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    if attempt < max_retries:
+                        logger.warning(
+                            f"Retry {attempt + 1}/{max_retries} for {func.__name__}: {str(e)}"
+                        )
+                        time.sleep(_delay)
+                        _delay *= backoff
+                    else:
+                        logger.error(
+                            f"Max retries exceeded for {func.__name__}: {str(e)}"
+                        )
+
+            raise last_exception
+        return wrapper
+    return decorator
+
+def validate_event_id(event_id):
+    """Validate event ID format"""
+    if not event_id or not isinstance(event_id, str):
+        raise ValidationError("Invalid event ID")
+    try:
+        uuid.UUID(event_id)
+    except ValueError:
+        raise ValidationError(f"Invalid event ID format: {event_id}")
+    return event_id
+
+def validate_folder_id(folder_id):
+    """Validate Google Drive folder ID"""
+    if not folder_id or not isinstance(folder_id, str):
+        raise ValidationError("Invalid folder ID")
+    # Basic validation - should be alphanumeric with possible special chars
+    if len(folder_id) < 10 or len(folder_id) > 100:
+        raise ValidationError(f"Invalid folder ID length: {folder_id}")
+    return folder_id
+
+def validate_image_file(file):
+    """Validate uploaded image file"""
+    if not file or file.filename == '':
+        raise ValidationError("No file provided")
+
+    allowed_extensions = {'jpg', 'jpeg', 'png', 'gif'}
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+
+    if ext not in allowed_extensions:
+        raise ValidationError(f"Invalid file type: {ext}. Allowed: {allowed_extensions}")
+
+    return file
+
+# ============================================
 # Background Task Executor
 # ============================================
 
@@ -70,10 +240,10 @@ def detect_gpu_availability():
     try:
         import torch
         if torch.cuda.is_available():
-            print(f"✓ GPU detected: {torch.cuda.get_device_name(0)}")
+            logger.info(f"✓ GPU detected: {torch.cuda.get_device_name(0)}")
             return True
         else:
-            print("○ No GPU detected, using CPU")
+            logger.info("○ No GPU detected, using CPU")
             return False
     except ImportError:
         # ถ้าไม่มี PyTorch ลองเช็คด้วยวิธีอื่น
@@ -81,13 +251,13 @@ def detect_gpu_availability():
             # เช็คว่า dlib ถูก compile ด้วย CUDA support หรือไม่
             import dlib
             if dlib.DLIB_USE_CUDA:
-                print("✓ GPU detected: dlib with CUDA support")
+                logger.info("✓ GPU detected: dlib with CUDA support")
                 return True
             else:
-                print("○ dlib without CUDA support, using CPU")
+                logger.info("○ dlib without CUDA support, using CPU")
                 return False
         except (ImportError, AttributeError):
-            print("○ No GPU detection available, defaulting to CPU")
+            logger.info("○ No GPU detection available, defaulting to CPU")
             return False
 
 def get_optimal_face_recognition_config():
@@ -112,7 +282,7 @@ def get_optimal_face_recognition_config():
         model = model_config
     else:
         # Default to hog if invalid
-        print(f"Warning: Invalid FACE_MODEL '{Config.FACE_MODEL}', defaulting to 'hog'")
+        logger.warning(f"Invalid FACE_MODEL '{Config.FACE_MODEL}', defaulting to 'hog'")
         model = 'hog'
 
     # Build configuration dictionary
@@ -125,16 +295,16 @@ def get_optimal_face_recognition_config():
     }
 
     # แสดงข้อมูล config
-    print("\n" + "="*50)
-    print("Face Recognition Configuration:")
-    print("="*50)
-    print(f"Device:       {'GPU (CUDA)' if config['use_gpu'] else 'CPU'}")
-    print(f"Model:        {config['model'].upper()} ({'CNN - High Accuracy' if config['model'] == 'cnn' else 'HOG - Fast Processing'})")
-    print(f"  (Setting: {Config.FACE_MODEL})")
-    print(f"Tolerance:    {config['tolerance']} (lower = stricter)")
-    print(f"Batch Size:   {config['batch_size']} images")
-    print(f"Num Jitters:  {config['num_jitters']}")
-    print("="*50 + "\n")
+    logger.info("="*50)
+    logger.info("Face Recognition Configuration:")
+    logger.info("="*50)
+    logger.info(f"Device:       {'GPU (CUDA)' if config['use_gpu'] else 'CPU'}")
+    logger.info(f"Model:        {config['model'].upper()} ({'CNN - High Accuracy' if config['model'] == 'cnn' else 'HOG - Fast Processing'})")
+    logger.info(f"  (Setting: {Config.FACE_MODEL})")
+    logger.info(f"Tolerance:    {config['tolerance']} (lower = stricter)")
+    logger.info(f"Batch Size:   {config['batch_size']} images")
+    logger.info(f"Num Jitters:  {config['num_jitters']}")
+    logger.info("="*50)
 
     return config
 
@@ -161,25 +331,42 @@ def init_db():
     try:
         schema_path = os.path.join(app.root_path, 'schema.sql')
         if not os.path.exists(schema_path):
-            # ถ้าหาไฟล์ schema.sql ไม่เจอ ให้แจ้งเตือนและหยุดทำงาน
-            print("\nERROR: 'schema.sql' not found in the project directory.")
-            print("Please make sure the file exists and is named correctly.\n")
-            return False # คืนค่าว่าทำงานไม่สำเร็จ
+            logger.error("schema.sql not found in the project directory")
+            logger.error("Please make sure the file exists and is named correctly")
+            return False
 
         with app.app_context():
             db = get_db()
             with open(schema_path, 'r', encoding='utf-8') as f:
                 db.cursor().executescript(f.read())
             db.commit()
-        return True # คืนค่าว่าทำงานสำเร็จ
+
+        logger.info("Database initialized successfully")
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Database error during initialization: {e}", exc_info=True)
+        return False
     except Exception as e:
-        print(f"\nAn error occurred during DB initialization: {e}\n")
+        logger.error(f"Unexpected error during DB initialization: {e}", exc_info=True)
         return False
     
 
 # --- Helper Functions for Face Recognition ---
+@retry_on_error(max_retries=3, delay=1, exceptions=(HttpError, IOError))
 def download_image_temp(drive_service, photo_id):
-    """Download image from Google Drive to temp file"""
+    """
+    Download image from Google Drive to temp file with retry logic
+
+    Args:
+        drive_service: Google Drive service instance
+        photo_id: Google Drive file ID
+
+    Returns:
+        str: Path to temp file, or None if failed
+
+    Raises:
+        GoogleDriveError: If download fails after retries
+    """
     try:
         request = drive_service.files().get_media(fileId=photo_id)
         fh = io.BytesIO()
@@ -187,29 +374,55 @@ def download_image_temp(drive_service, photo_id):
         done = False
         while not done:
             status, done = downloader.next_chunk()
-        
+
         # Save to temp file
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
         temp_file.write(fh.getvalue())
         temp_file.close()
+
+        logger.debug(f"Downloaded image {photo_id} to {temp_file.name}")
         return temp_file.name
+    except HttpError as e:
+        logger.error(f"Google Drive API error downloading {photo_id}: {e}")
+        raise GoogleDriveError(f"Failed to download image {photo_id}") from e
     except Exception as e:
-        print(f"Error downloading image {photo_id}: {e}")
+        logger.error(f"Unexpected error downloading image {photo_id}: {e}")
         return None
 
 def extract_face_encodings(image_path):
     """
     Extract face encodings from an image
     ใช้ config ที่ detect GPU/CPU อัตโนมัติ
+
+    Args:
+        image_path: Path to image file
+
+    Returns:
+        list: List of face data (encoding and location)
+
+    Raises:
+        ImageProcessingError: If image processing fails
     """
     try:
-        image = face_recognition.load_image_file(image_path)
+        # Validate image file exists
+        if not os.path.exists(image_path):
+            raise ImageProcessingError(f"Image file not found: {image_path}")
+
+        # Load image
+        try:
+            image = face_recognition.load_image_file(image_path)
+        except Exception as e:
+            raise ImageProcessingError(f"Failed to load image: {e}") from e
 
         # ใช้ model ที่เหมาะสมตาม GPU/CPU
         face_locations = face_recognition.face_locations(
             image,
             model=FACE_RECOGNITION_CONFIG['model']
         )
+
+        if not face_locations:
+            logger.debug(f"No faces found in {image_path}")
+            return []
 
         # ใช้ num_jitters สำหรับความแม่นยำ (GPU จะใช้ค่าสูงกว่า)
         face_encodings = face_recognition.face_encodings(
@@ -229,10 +442,15 @@ def extract_face_encodings(image_path):
                     'left': location[3]
                 }
             })
+
+        logger.debug(f"Extracted {len(results)} face(s) from {image_path}")
         return results
+
+    except ImageProcessingError:
+        raise
     except Exception as e:
-        print(f"Error extracting faces from {image_path}: {e}")
-        return []
+        logger.error(f"Error extracting faces from {image_path}: {e}", exc_info=True)
+        raise ImageProcessingError(f"Face extraction failed: {e}") from e
 
 def create_average_encoding(encodings):
     """Create average encoding from multiple face encodings"""
@@ -376,8 +594,10 @@ def get_event_latest_task(event_id):
 def init_db_command():
     """Clears the existing data and creates new tables."""
     if init_db():
+        logger.info('Successfully initialized the database.')
         print('Successfully initialized the database.')
     else:
+        logger.error('Failed to initialize the database.')
         print('Failed to initialize the database.')
 
 
@@ -429,6 +649,7 @@ def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
     indexed_photos = 0
     total_faces = 0
     temp_files = []
+    task_logger = logging.getLogger(f"task.{task_id}")
 
     try:
         # Update task to running
@@ -438,19 +659,30 @@ def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
         creds = Credentials(**credentials_dict)
         drive_service = build('drive', 'v3', credentials=creds)
 
-        print(f"[Task {task_id}] Starting Face Indexing for Event: {event_id}")
+        task_logger.info(f"Starting Face Indexing for Event: {event_id}")
 
         # Get all images from the folder
         query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
-        results = drive_service.files().list(
-            q=query,
-            fields="files(id, name)",
-            pageSize=100
-        ).execute()
-        photos = results.get('files', [])
+
+        try:
+            results = drive_service.files().list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=100
+            ).execute()
+            photos = results.get('files', [])
+        except HttpError as e:
+            raise GoogleDriveError(f"Failed to list files from folder {folder_id}") from e
 
         total_photos = len(photos)
-        print(f"[Task {task_id}] Found {total_photos} photos to process")
+        task_logger.info(f"Found {total_photos} photos to process")
+
+        if total_photos == 0:
+            task_logger.warning(f"No photos found in folder {folder_id}")
+            update_task_status(task_id, 'completed', progress=0, total=0)
+            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Completed', event_id))
+            db_conn.commit()
+            return
 
         # Update task with total
         update_task_status(task_id, 'running', progress=0, total=total_photos)
@@ -461,12 +693,13 @@ def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
         batch_size = FACE_RECOGNITION_CONFIG['batch_size']
         for i in range(0, len(photos), batch_size):
             batch = photos[i:i+batch_size]
-            print(f"[Task {task_id}] Processing batch {i//batch_size + 1} ({len(batch)} photos)...")
+            batch_num = i//batch_size + 1
+            task_logger.info(f"Processing batch {batch_num} ({len(batch)} photos)...")
 
             for photo in batch:
                 photo_id = photo['id']
                 photo_name = photo['name']
-                print(f"[Task {task_id}]   Processing: {photo_name}")
+                task_logger.debug(f"Processing: {photo_name}")
 
                 # Update current item
                 update_task_status(
@@ -476,40 +709,51 @@ def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
                     current_item=photo_name
                 )
 
-                # Download image to temp file
-                temp_path = download_image_temp(drive_service, photo_id)
-                if not temp_path:
+                # Download image to temp file with error handling
+                try:
+                    temp_path = download_image_temp(drive_service, photo_id)
+                    if not temp_path:
+                        task_logger.warning(f"Skipping {photo_name}: download failed")
+                        continue
+
+                    temp_files.append(temp_path)
+
+                    # Extract face encodings
+                    faces = extract_face_encodings(temp_path)
+
+                    if faces:
+                        task_logger.debug(f"Found {len(faces)} face(s) in {photo_name}")
+                        for face_data in faces:
+                            # Convert encoding to blob for storage
+                            encoding_blob = face_data['encoding'].tobytes()
+                            location_json = json.dumps(face_data['location'])
+
+                            # Save to database
+                            db_conn.execute(
+                                'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
+                                (event_id, photo_id, photo_name, encoding_blob, location_json)
+                            )
+                            total_faces += 1
+                    else:
+                        task_logger.debug(f"No faces found in {photo_name}")
+
+                    indexed_photos += 1
+
+                    # Update progress in events table
+                    db_conn.execute(
+                        "UPDATE events SET indexed_photos = ?, total_faces = ? WHERE id = ?",
+                        (indexed_photos, total_faces, event_id)
+                    )
+                    db_conn.commit()
+
+                except (GoogleDriveError, ImageProcessingError) as e:
+                    task_logger.warning(f"Error processing {photo_name}: {e}")
+                    # Continue with next photo
                     continue
-
-                temp_files.append(temp_path)
-
-                # Extract face encodings
-                faces = extract_face_encodings(temp_path)
-
-                if faces:
-                    print(f"[Task {task_id}]     Found {len(faces)} faces")
-                    for face_data in faces:
-                        # Convert encoding to blob for storage
-                        encoding_blob = face_data['encoding'].tobytes()
-                        location_json = json.dumps(face_data['location'])
-
-                        # Save to database
-                        db_conn.execute(
-                            'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
-                            (event_id, photo_id, photo_name, encoding_blob, location_json)
-                        )
-                        total_faces += 1
-                else:
-                    print(f"[Task {task_id}]     No faces found")
-
-                indexed_photos += 1
-
-                # Update progress in events table
-                db_conn.execute(
-                    "UPDATE events SET indexed_photos = ?, total_faces = ? WHERE id = ?",
-                    (indexed_photos, total_faces, event_id)
-                )
-                db_conn.commit()
+                except Exception as e:
+                    task_logger.error(f"Unexpected error processing {photo_name}: {e}", exc_info=True)
+                    # Continue with next photo
+                    continue
 
         # Update final status
         db_conn.execute(
@@ -519,21 +763,27 @@ def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
         db_conn.commit()
 
         update_task_status(task_id, 'completed', progress=indexed_photos, total=total_photos)
-        print(f"[Task {task_id}] Completed. Photos: {indexed_photos}, Faces: {total_faces}")
+        task_logger.info(f"Completed. Photos: {indexed_photos}, Faces: {total_faces}")
 
-    except HttpError as error:
-        error_msg = f'Google Drive API error: {error}'
-        print(f"[Task {task_id}] {error_msg}")
-        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-        db_conn.commit()
-        update_task_status(task_id, 'failed', error=error_msg)
+    except GoogleDriveError as e:
+        error_msg = f'Google Drive error: {str(e)}'
+        task_logger.error(error_msg, exc_info=True)
+        try:
+            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+            db_conn.commit()
+            update_task_status(task_id, 'failed', error=error_msg)
+        except Exception as db_error:
+            task_logger.error(f"Failed to update failure status: {db_error}")
 
     except Exception as e:
         error_msg = f'Unexpected error: {str(e)}'
-        print(f"[Task {task_id}] {error_msg}")
-        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-        db_conn.commit()
-        update_task_status(task_id, 'failed', error=error_msg)
+        task_logger.error(error_msg, exc_info=True)
+        try:
+            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+            db_conn.commit()
+            update_task_status(task_id, 'failed', error=error_msg)
+        except Exception as db_error:
+            task_logger.error(f"Failed to update failure status: {db_error}")
 
     finally:
         # Clean up temp files
@@ -541,78 +791,155 @@ def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-            except:
-                pass
+                    task_logger.debug(f"Cleaned up temp file: {temp_file}")
+            except Exception as e:
+                task_logger.warning(f"Failed to delete temp file {temp_file}: {e}")
 
         # Close database connection
-        db_conn.close()
+        try:
+            db_conn.close()
+        except Exception as e:
+            task_logger.error(f"Error closing database connection: {e}")
 
 @app.route('/start_indexing/<event_id>')
 def start_indexing(event_id):
     """Start face indexing as a background task"""
-    db = get_db()
-    event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+    try:
+        # Validate event ID
+        validate_event_id(event_id)
 
-    if not event_data or 'credentials' not in session:
+        # Check authentication
+        if 'credentials' not in session:
+            logger.warning(f"Unauthenticated user attempted to start indexing for event {event_id}")
+            return redirect(url_for('photographer_dashboard'))
+
+        # Get event data
+        db = get_db()
+        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if not event_data:
+            logger.warning(f"Event not found: {event_id}")
+            return redirect(url_for('photographer_dashboard'))
+
+        # Validate folder ID
+        folder_id = event_data['drive_folder_id']
+        if not folder_id:
+            logger.warning(f"No folder ID set for event {event_id}")
+            return redirect(url_for('photographer_dashboard'))
+
+        # Create background task
+        task_id = create_task(event_id, 'indexing')
+
+        # Get credentials from session
+        credentials_dict = session['credentials']
+
+        # Submit task to background executor
+        executor.submit(run_face_indexing_task, event_id, task_id, credentials_dict, folder_id)
+
+        logger.info(f"✓ Face indexing task created: {task_id} for event: {event_data['name']}")
+
+        # Redirect to dashboard (task runs in background)
         return redirect(url_for('photographer_dashboard'))
 
-    folder_id = event_data['drive_folder_id']
-    if not folder_id:
+    except ValidationError as e:
+        logger.error(f"Validation error in start_indexing: {e}")
         return redirect(url_for('photographer_dashboard'))
-
-    # Create background task
-    task_id = create_task(event_id, 'indexing')
-
-    # Get credentials from session
-    credentials_dict = session['credentials']
-
-    # Submit task to background executor
-    executor.submit(run_face_indexing_task, event_id, task_id, credentials_dict, folder_id)
-
-    print(f"✓ Face indexing task created: {task_id} for event: {event_data['name']}")
-
-    # Redirect to dashboard (task runs in background)
-    return redirect(url_for('photographer_dashboard'))
+    except Exception as e:
+        logger.error(f"Error starting indexing for event {event_id}: {e}", exc_info=True)
+        return redirect(url_for('photographer_dashboard'))
 
 @app.route('/delete_event/<event_id>', methods=['POST'])
 def delete_event(event_id):
-    db = get_db()
-    event_to_delete = db.execute('SELECT qr_path FROM events WHERE id = ?', (event_id,)).fetchone()
-    if event_to_delete:
-        qr_path = os.path.join('static', event_to_delete['qr_path'])
-        if os.path.exists(qr_path):
-            os.remove(qr_path)
-        
-        db.execute('DELETE FROM faces WHERE event_id = ?', (event_id,))
-        db.execute('DELETE FROM events WHERE id = ?', (event_id,))
-        db.commit()
-        print(f"Deleted event and associated faces: {event_id}")
-    return redirect(url_for('photographer_dashboard'))
+    try:
+        validate_event_id(event_id)
+
+        db = get_db()
+        event_to_delete = db.execute('SELECT qr_path FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if event_to_delete:
+            qr_path = os.path.join('static', event_to_delete['qr_path'])
+            if os.path.exists(qr_path):
+                try:
+                    os.remove(qr_path)
+                    logger.debug(f"Deleted QR code: {qr_path}")
+                except OSError as e:
+                    logger.warning(f"Failed to delete QR code {qr_path}: {e}")
+
+            db.execute('DELETE FROM faces WHERE event_id = ?', (event_id,))
+            db.execute('DELETE FROM events WHERE id = ?', (event_id,))
+            db.commit()
+            logger.info(f"Deleted event and associated faces: {event_id}")
+        else:
+            logger.warning(f"Attempted to delete non-existent event: {event_id}")
+
+        return redirect(url_for('photographer_dashboard'))
+
+    except ValidationError as e:
+        logger.error(f"Validation error in delete_event: {e}")
+        return redirect(url_for('photographer_dashboard'))
+    except Exception as e:
+        logger.error(f"Error deleting event {event_id}: {e}", exc_info=True)
+        return redirect(url_for('photographer_dashboard'))
 
 @app.route('/set_folder/<event_id>/<folder_id>')
 def set_folder(event_id, folder_id):
-    db = get_db()
-    db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
-    db.commit()
-    print(f"Set folder {folder_id} for event {event_id}")
-    return redirect(url_for('photographer_dashboard'))
+    try:
+        validate_event_id(event_id)
+        validate_folder_id(folder_id)
+
+        db = get_db()
+        db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
+        db.commit()
+        logger.info(f"Set folder {folder_id} for event {event_id}")
+        return redirect(url_for('photographer_dashboard'))
+
+    except ValidationError as e:
+        logger.error(f"Validation error in set_folder: {e}")
+        return "Invalid event or folder ID", 400
+    except Exception as e:
+        logger.error(f"Error setting folder for event {event_id}: {e}", exc_info=True)
+        return "An error occurred", 500
 
 @app.route('/set_folder_from_link/<event_id>', methods=['POST'])
 def set_folder_from_link(event_id):
-    link = request.form['folder_link']
     try:
-        if '/folders/' in link: folder_id = link.split('/folders/')[-1]
-        else: folder_id = link.split('/')[-1]
-        if '?' in folder_id: folder_id = folder_id.split('?')[0]
-        if '#' in folder_id: folder_id = folder_id.split('#')[0]
-    except (IndexError, AttributeError):
-        return "Invalid Google Drive Folder URL format.", 400
-    
-    db = get_db()
-    db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
-    db.commit()
-    print(f"Set folder {folder_id} for event {event_id} via link")
-    return redirect(url_for('photographer_dashboard'))
+        validate_event_id(event_id)
+
+        link = request.form.get('folder_link', '').strip()
+        if not link:
+            raise ValidationError("Folder link is required")
+
+        # Parse folder ID from link
+        try:
+            if '/folders/' in link:
+                folder_id = link.split('/folders/')[-1]
+            else:
+                folder_id = link.split('/')[-1]
+
+            # Clean up parameters
+            if '?' in folder_id:
+                folder_id = folder_id.split('?')[0]
+            if '#' in folder_id:
+                folder_id = folder_id.split('#')[0]
+
+            validate_folder_id(folder_id)
+
+        except (IndexError, AttributeError, ValidationError) as e:
+            logger.warning(f"Invalid folder link format: {link}")
+            return "Invalid Google Drive Folder URL format.", 400
+
+        db = get_db()
+        db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
+        db.commit()
+        logger.info(f"Set folder {folder_id} for event {event_id} via link")
+        return redirect(url_for('photographer_dashboard'))
+
+    except ValidationError as e:
+        logger.error(f"Validation error in set_folder_from_link: {e}")
+        return str(e), 400
+    except Exception as e:
+        logger.error(f"Error setting folder from link for event {event_id}: {e}", exc_info=True)
+        return "An error occurred", 500
     
 # --- API Endpoints and Auth Routes (เหมือนเดิม) ---
 @app.route('/api/check_auth')
@@ -622,7 +949,10 @@ def check_auth():
 
 @app.route('/api/folders')
 def get_folders():
-    if 'credentials' not in session: return jsonify({'error': 'Not authenticated'}), 401
+    if 'credentials' not in session:
+        logger.warning("Unauthenticated request to /api/folders")
+        return jsonify({'error': 'Not authenticated'}), 401
+
     try:
         creds = Credentials(**session['credentials'])
         drive_service = build('drive', 'v3', credentials=creds)
@@ -630,10 +960,15 @@ def get_folders():
             q="mimeType='application/vnd.google-apps.folder' and trashed=false",
             pageSize=100, fields="files(id, name)", orderBy="name"
         ).execute()
-        return jsonify(results.get('files', [])), 200
+        folders = results.get('files', [])
+        logger.debug(f"Retrieved {len(folders)} folders from Google Drive")
+        return jsonify(folders), 200
     except HttpError as error:
-        print(f'An error occurred: {error}')
+        logger.error(f'Google Drive API error in get_folders: {error}', exc_info=True)
         return jsonify({'error': 'Failed to fetch folders'}), 500
+    except Exception as error:
+        logger.error(f'Unexpected error in get_folders: {error}', exc_info=True)
+        return jsonify({'error': 'An unexpected error occurred'}), 500
         
 @app.route('/event/<event_id>')
 def event_page(event_id):
@@ -685,21 +1020,39 @@ def callback_temp():
 
 @app.route('/search_faces/<event_id>', methods=['POST'])
 def search_faces(event_id):
-    if 'selfie_images' not in request.files:
-        return "No images uploaded.", 400
-    
-    files = request.files.getlist('selfie_images')
-    if len(files) == 0 or files[0].filename == '':
-        return "No selected files.", 400
-    
-    if len(files) > 3:
-        return "Maximum 3 images allowed.", 400
-
-    # Process uploaded images
-    uploaded_encodings = []
     temp_files = []
-    
+
     try:
+        # Validate event ID
+        validate_event_id(event_id)
+
+        # Validate file upload
+        if 'selfie_images' not in request.files:
+            logger.warning(f"No images uploaded for event {event_id}")
+            return "No images uploaded.", 400
+
+        files = request.files.getlist('selfie_images')
+        if len(files) == 0 or files[0].filename == '':
+            logger.warning(f"No files selected for event {event_id}")
+            return "No selected files.", 400
+
+        if len(files) > 3:
+            logger.warning(f"Too many files uploaded for event {event_id}: {len(files)}")
+            return "Maximum 3 images allowed.", 400
+
+        # Validate each file
+        for file in files:
+            if file and file.filename:
+                try:
+                    validate_image_file(file)
+                except ValidationError as e:
+                    return str(e), 400
+
+        logger.info(f"Processing {len(files)} uploaded image(s) for event {event_id}")
+
+        # Process uploaded images
+        uploaded_encodings = []
+
         # Extract face encodings from uploaded images
         for file in files:
             if file and file.filename != '':
@@ -707,41 +1060,48 @@ def search_faces(event_id):
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
                 file.save(temp_file.name)
                 temp_files.append(temp_file.name)
-                
+
                 # Extract face encodings
-                faces = extract_face_encodings(temp_file.name)
-                if faces:
-                    # Use first face found in each image
-                    uploaded_encodings.append(faces[0]['encoding'])
-                    print(f"Found face in uploaded image: {file.filename}")
-        
+                try:
+                    faces = extract_face_encodings(temp_file.name)
+                    if faces:
+                        # Use first face found in each image
+                        uploaded_encodings.append(faces[0]['encoding'])
+                        logger.debug(f"Found face in uploaded image: {file.filename}")
+                    else:
+                        logger.debug(f"No face found in uploaded image: {file.filename}")
+                except ImageProcessingError as e:
+                    logger.warning(f"Failed to process {file.filename}: {e}")
+                    continue
+
         if not uploaded_encodings:
+            logger.warning(f"No faces detected in any uploaded photos for event {event_id}")
             return "No faces detected in uploaded photos. Please try again with clear face photos.", 400
-        
+
         # Create average encoding from uploaded faces
         search_encoding = create_average_encoding(uploaded_encodings)
-        print(f"Created average encoding from {len(uploaded_encodings)} face(s)")
-        
+        logger.info(f"Created average encoding from {len(uploaded_encodings)} face(s)")
+
         # Search in database
         db = get_db()
         cursor = db.execute(
             'SELECT photo_id, photo_name, face_encoding FROM faces WHERE event_id = ?',
             (event_id,)
         )
-        
+
         matching_photos = {}  # Use dict to avoid duplicates
         faces_checked = 0
-        
+
         for row in cursor:
             photo_id = row['photo_id']
             photo_name = row['photo_name']
-            
+
             # Convert blob back to numpy array
             stored_encoding = np.frombuffer(row['face_encoding'], dtype=np.float64)
-            
+
             # Calculate face distance
             distance = face_recognition.face_distance([stored_encoding], search_encoding)[0]
-            
+
             # Check if match (lower distance = better match)
             if distance <= FACE_RECOGNITION_CONFIG['tolerance']:
                 if photo_id not in matching_photos:
@@ -753,13 +1113,13 @@ def search_faces(event_id):
                     # Keep the best match for each photo
                     if distance < matching_photos[photo_id]['distance']:
                         matching_photos[photo_id]['distance'] = distance
-                
-                print(f"Match found: {photo_name} (distance: {distance:.3f})")
-            
+
+                logger.debug(f"Match found: {photo_name} (distance: {distance:.3f})")
+
             faces_checked += 1
-        
-        print(f"Checked {faces_checked} faces, found {len(matching_photos)} matching photos")
-        
+
+        logger.info(f"Checked {faces_checked} faces, found {len(matching_photos)} matching photos")
+
         # Convert to Google Drive links
         photo_links = []
         for photo_id, photo_info in matching_photos.items():
@@ -768,28 +1128,32 @@ def search_faces(event_id):
                 'name': photo_info['name'],
                 'distance': photo_info['distance']
             })
-        
+
         # Sort by best match (lowest distance)
         photo_links.sort(key=lambda x: x['distance'])
-        
+
         # Return results
-        return render_template('results_page.html', 
+        return render_template('results_page.html',
                              photo_links=[p['url'] for p in photo_links],
                              event_id=event_id,
                              matches_count=len(photo_links))
-        
+
+    except ValidationError as e:
+        logger.error(f"Validation error in search_faces: {e}")
+        return str(e), 400
     except Exception as e:
-        print(f"Error in search_faces: {e}")
+        logger.error(f"Error in search_faces for event {event_id}: {e}", exc_info=True)
         return f"An error occurred while processing: {str(e)}", 500
-        
+
     finally:
         # Clean up temp files
         for temp_file in temp_files:
             try:
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
-            except:
-                pass
+                    logger.debug(f"Cleaned up temp file: {temp_file}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temp file {temp_file}: {e}")
 
 # ============================================
 # API Endpoints for Task Status
