@@ -80,6 +80,21 @@ chmod +x start.sh
 - ⚙️ **Environment-based Config** - ตั้งค่าผ่าน `.env` file
 - 🔍 **Detailed Error Messages** - แสดง error ละเอียดเพื่อ debug ง่าย
 
+### 📊 Real-time Monitoring (Phase 2A)
+- 📈 **Progress Bar** - แสดง progress แบบ real-time พร้อม animation
+- 🔄 **Auto-polling** - อัพเดตข้อมูลทุก 2 วินาทีอัตโนมัติ
+- ⏱️ **ETA Calculation** - คำนวณเวลาที่เหลือจากความเร็วเฉลี่ย
+- 📸 **Current Photo Display** - แสดงชื่อรูปที่กำลังประมวลผล
+- 👤 **Faces Counter** - นับจำนวนใบหน้าที่เจอแบบ real-time
+- 🔁 **Auto-refresh** - Reload หน้าอัตโนมัติเมื่อเสร็จหรือล้มเหลว
+
+### 🛡️ Advanced Security (Phase 2B)
+- 📏 **File Size Limits** - จำกัดขนาดไฟล์สูงสุด 10MB
+- ✍️ **Event Name Validation** - ตรวจสอบชื่อ 3-100 ตัวอักษร
+- 🔐 **Google Drive Permissions** - ตรวจสอบสิทธิ์ก่อน link folder
+- 🧹 **Input Sanitization** - ลบอักขระที่ไม่พึงประสงค์
+- ⚠️ **User-friendly Errors** - แสดง error แบบเข้าใจง่าย
+
 ## โครงสร้างโปรเจค
 
 ```
@@ -298,12 +313,25 @@ grep "task.abc-123" logs/app.log
 - [x] Environment configuration ✅
 - [x] GPU/CPU auto-detection ✅
 - [x] Error handling & logging system ✅
-- [x] Input validation ✅
+- [x] Basic input validation ✅
 
-### 🔄 In Progress (Phase 2 - HIGH PRIORITY)
-- [ ] Frontend real-time progress UI
-- [ ] Advanced error handling for edge cases
-- [ ] Security improvements (rate limiting, CSRF protection)
+### ✅ Completed (Phase 2 - HIGH PRIORITY)
+- [x] Frontend real-time progress UI ✅
+  - Progress bar with percentage
+  - Current photo display
+  - Estimated time remaining (ETA)
+  - Real-time faces count
+  - Auto-refresh on completion/failure
+- [x] Advanced input validation ✅
+  - Event name validation (3-100 chars)
+  - File size limits (10MB max)
+  - Google Drive folder permissions check
+  - Input sanitization
+
+### 🔄 In Progress (Phase 2C - UI Polish)
+- [ ] Inline form validation errors
+- [ ] Loading states for buttons
+- [ ] Success/error toast notifications
 
 ### 📋 Planned (Phase 3 - MEDIUM)
 - [ ] PostgreSQL support
