@@ -1193,15 +1193,24 @@ def api_get_task_status(task_id):
 @app.route('/api/event/<event_id>/task')
 def api_get_event_task(event_id):
     """
-    Get latest task for an event
+    Get latest task for an event with event stats
 
     Returns:
-        JSON: Task status information
+        JSON: Task status information with event statistics
     """
+    try:
+        validate_event_id(event_id)
+    except ValidationError:
+        return jsonify({'error': 'Invalid event ID'}), 400
+
     task = get_event_latest_task(event_id)
 
     if task is None:
         return jsonify({'error': 'No task found for this event'}), 404
+
+    # Get event statistics
+    db = get_db()
+    event = db.execute('SELECT indexed_photos, total_faces FROM events WHERE id = ?', (event_id,)).fetchone()
 
     # Calculate progress percentage
     if task['total'] and task['total'] > 0:
@@ -1209,7 +1218,7 @@ def api_get_event_task(event_id):
     else:
         progress_percent = 0
 
-    return jsonify({
+    response = {
         'id': task['id'],
         'status': task['status'],
         'progress': task['progress'],
@@ -1217,7 +1226,14 @@ def api_get_event_task(event_id):
         'progress_percent': progress_percent,
         'current_item': task['current_item'],
         'error': task['error'],
-    })
+    }
+
+    # Add event statistics if available
+    if event:
+        response['indexed_photos'] = event['indexed_photos'] or 0
+        response['total_faces'] = event['total_faces'] or 0
+
+    return jsonify(response)
 
 if __name__ == '__main__':
     # Run Flask development server

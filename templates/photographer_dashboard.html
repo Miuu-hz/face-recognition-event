@@ -220,6 +220,96 @@
             border: 1px solid #B8E6B8;
         }
 
+        .status.failed {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Progress Bar Styles */
+        .progress-container {
+            margin-top: 1rem;
+            background: var(--soft-white);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid var(--light-brown);
+        }
+
+        .progress-bar-wrapper {
+            background: #E0E0E0;
+            border-radius: 10px;
+            height: 24px;
+            overflow: hidden;
+            position: relative;
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, var(--sage-green), var(--primary-brown));
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .progress-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--dark-brown);
+        }
+
+        .progress-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .progress-info-label {
+            color: var(--warm-gray);
+            font-size: 0.8rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .progress-info-value {
+            font-weight: 600;
+            color: var(--primary-brown);
+        }
+
+        .current-photo {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: var(--cream);
+            border-radius: 5px;
+            font-size: 0.85rem;
+            color: var(--dark-brown);
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .error-message {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: #f8d7da;
+            border-radius: 5px;
+            color: #721c24;
+            font-size: 0.9rem;
+            border-left: 4px solid #C44536;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
         .no-events {
             text-align: center;
             padding: 3rem;
@@ -423,10 +513,40 @@
                                         <div class="status in-progress">
                                             <span class="loading"></span>⏳ Indexing in progress...
                                         </div>
+                                        <div class="progress-container" id="progress-{{ event.id }}" data-event-id="{{ event.id }}">
+                                            <div class="progress-bar-wrapper">
+                                                <div class="progress-bar" style="width: 0%;">0%</div>
+                                            </div>
+                                            <div class="progress-info">
+                                                <div class="progress-info-item">
+                                                    <span class="progress-info-label">Progress</span>
+                                                    <span class="progress-info-value progress-count">0 / 0 photos</span>
+                                                </div>
+                                                <div class="progress-info-item">
+                                                    <span class="progress-info-label">Faces Found</span>
+                                                    <span class="progress-info-value faces-count">{{ event.total_faces or 0 }} faces</span>
+                                                </div>
+                                                <div class="progress-info-item">
+                                                    <span class="progress-info-label">Est. Time</span>
+                                                    <span class="progress-info-value eta-value">Calculating...</span>
+                                                </div>
+                                            </div>
+                                            <div class="current-photo">
+                                                📸 <span class="current-photo-name">Starting...</span>
+                                            </div>
+                                        </div>
                                     {% elif event.indexing_status == 'Completed' %}
                                         <div class="status completed">✅ Indexing Complete!</div>
+                                        <p style="margin-top: 0.5rem; color: var(--dark-brown);">
+                                            📊 <strong>{{ event.indexed_photos or 0 }}</strong> photos indexed,
+                                            <strong>{{ event.total_faces or 0 }}</strong> faces found
+                                        </p>
                                     {% elif event.indexing_status == 'Failed' %}
-                                        <div class="status" style="background-color: #f8d7da; color: #721c24;">⚠️ Indexing Failed</div>
+                                        <div class="status failed">⚠️ Indexing Failed</div>
+                                        <div class="error-message" id="error-{{ event.id }}">
+                                            An error occurred during indexing. Please try again.
+                                        </div>
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary btn-small">🔄 Retry Indexing</a>
                                     {% endif %}
 
                                 {% else %}
@@ -477,7 +597,9 @@
 
     <script>
         let currentEventId = '';
-        
+        let progressPollers = {}; // Store polling intervals
+        let taskStartTimes = {}; // Store task start times for ETA calculation
+
         // Modal functionality
         const modal = document.getElementById('folderModal');
         const closeBtn = document.getElementsByClassName('close')[0];
@@ -582,6 +704,181 @@
             if (e.key === 'Escape' && modal.style.display === 'block') {
                 modal.style.display = 'none';
             }
+        });
+
+        // ============================================
+        // Real-time Progress Tracking
+        // ============================================
+
+        /**
+         * Update progress UI for an event
+         */
+        function updateProgressUI(eventId, taskData) {
+            const progressContainer = document.getElementById(`progress-${eventId}`);
+            if (!progressContainer) return;
+
+            const progressBar = progressContainer.querySelector('.progress-bar');
+            const progressCount = progressContainer.querySelector('.progress-count');
+            const facesCount = progressContainer.querySelector('.faces-count');
+            const etaValue = progressContainer.querySelector('.eta-value');
+            const currentPhotoName = progressContainer.querySelector('.current-photo-name');
+
+            // Calculate progress percentage
+            const percentage = taskData.progress_percent || 0;
+
+            // Update progress bar
+            progressBar.style.width = `${percentage}%`;
+            progressBar.textContent = `${percentage}%`;
+
+            // Update progress count
+            const progress = taskData.progress || 0;
+            const total = taskData.total || 0;
+            progressCount.textContent = `${progress} / ${total} photos`;
+
+            // Update faces count if available
+            if (taskData.total_faces !== undefined) {
+                facesCount.textContent = `${taskData.total_faces} faces`;
+            }
+
+            // Update current photo
+            if (taskData.current_item) {
+                currentPhotoName.textContent = taskData.current_item;
+            } else if (taskData.status === 'running') {
+                currentPhotoName.textContent = 'Processing...';
+            }
+
+            // Calculate and update ETA
+            if (taskData.status === 'running' && progress > 0 && total > 0) {
+                const eta = calculateETA(eventId, progress, total);
+                etaValue.textContent = eta;
+            } else {
+                etaValue.textContent = 'Calculating...';
+            }
+        }
+
+        /**
+         * Calculate estimated time remaining
+         */
+        function calculateETA(eventId, progress, total) {
+            if (!taskStartTimes[eventId]) {
+                taskStartTimes[eventId] = Date.now();
+                return 'Calculating...';
+            }
+
+            const elapsed = (Date.now() - taskStartTimes[eventId]) / 1000; // seconds
+            const avgTimePerPhoto = elapsed / progress;
+            const remaining = total - progress;
+            const etaSeconds = avgTimePerPhoto * remaining;
+
+            if (etaSeconds < 60) {
+                return `${Math.round(etaSeconds)}s`;
+            } else if (etaSeconds < 3600) {
+                const minutes = Math.floor(etaSeconds / 60);
+                const seconds = Math.round(etaSeconds % 60);
+                return `${minutes}m ${seconds}s`;
+            } else {
+                const hours = Math.floor(etaSeconds / 3600);
+                const minutes = Math.floor((etaSeconds % 3600) / 60);
+                return `${hours}h ${minutes}m`;
+            }
+        }
+
+        /**
+         * Poll task status for an event
+         */
+        async function pollTaskStatus(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/task`);
+
+                if (!response.ok) {
+                    console.warn(`No task found for event ${eventId}`);
+                    return;
+                }
+
+                const taskData = await response.json();
+
+                // Update progress UI
+                updateProgressUI(eventId, taskData);
+
+                // Handle task completion
+                if (taskData.status === 'completed') {
+                    console.log(`Task completed for event ${eventId}`);
+                    stopPolling(eventId);
+                    // Reload page to show updated status
+                    setTimeout(() => location.reload(), 1000);
+                }
+
+                // Handle task failure
+                if (taskData.status === 'failed') {
+                    console.error(`Task failed for event ${eventId}:`, taskData.error);
+                    stopPolling(eventId);
+                    // Reload page to show error
+                    setTimeout(() => location.reload(), 1000);
+                }
+
+            } catch (error) {
+                console.error(`Error polling task status for event ${eventId}:`, error);
+            }
+        }
+
+        /**
+         * Start polling for an event
+         */
+        function startPolling(eventId) {
+            // Don't start if already polling
+            if (progressPollers[eventId]) return;
+
+            console.log(`Starting progress polling for event ${eventId}`);
+
+            // Initialize start time
+            taskStartTimes[eventId] = Date.now();
+
+            // Poll immediately
+            pollTaskStatus(eventId);
+
+            // Then poll every 2 seconds
+            progressPollers[eventId] = setInterval(() => {
+                pollTaskStatus(eventId);
+            }, 2000);
+        }
+
+        /**
+         * Stop polling for an event
+         */
+        function stopPolling(eventId) {
+            if (progressPollers[eventId]) {
+                console.log(`Stopping progress polling for event ${eventId}`);
+                clearInterval(progressPollers[eventId]);
+                delete progressPollers[eventId];
+                delete taskStartTimes[eventId];
+            }
+        }
+
+        /**
+         * Initialize progress tracking on page load
+         */
+        function initProgressTracking() {
+            // Find all events with "In Progress" status
+            const progressContainers = document.querySelectorAll('.progress-container');
+
+            progressContainers.forEach(container => {
+                const eventId = container.dataset.eventId;
+                if (eventId) {
+                    startPolling(eventId);
+                }
+            });
+
+            console.log(`Initialized progress tracking for ${progressContainers.length} event(s)`);
+        }
+
+        // Start tracking when page loads
+        document.addEventListener('DOMContentLoaded', initProgressTracking);
+
+        // Cleanup polling when page unloads
+        window.addEventListener('beforeunload', () => {
+            Object.keys(progressPollers).forEach(eventId => {
+                stopPolling(eventId);
+            });
         });
     </script>
 </body>
