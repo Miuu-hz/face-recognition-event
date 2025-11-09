@@ -222,6 +222,139 @@ def validate_image_file(file):
 
     return file
 
+def validate_file_size(file, max_size_mb=10):
+    """
+    Validate file size
+
+    Args:
+        file: File object from request.files
+        max_size_mb: Maximum file size in MB (default: 10MB)
+
+    Raises:
+        ValidationError: If file is too large
+    """
+    if not file:
+        return
+
+    # Seek to end to get file size
+    file.seek(0, 2)  # Seek to end
+    size = file.tell()  # Get position (size in bytes)
+    file.seek(0)  # Reset to beginning
+
+    max_size_bytes = max_size_mb * 1024 * 1024
+
+    if size > max_size_bytes:
+        size_mb = size / (1024 * 1024)
+        raise ValidationError(
+            f"File too large: {size_mb:.1f}MB. Maximum allowed: {max_size_mb}MB"
+        )
+
+    return file
+
+def validate_event_name(name):
+    """
+    Validate event name
+
+    Args:
+        name: Event name string
+
+    Returns:
+        str: Sanitized event name
+
+    Raises:
+        ValidationError: If name is invalid
+    """
+    if not name or not isinstance(name, str):
+        raise ValidationError("Event name is required")
+
+    # Strip whitespace
+    name = name.strip()
+
+    # Check length
+    if len(name) < 3:
+        raise ValidationError("Event name must be at least 3 characters long")
+
+    if len(name) > 100:
+        raise ValidationError("Event name must not exceed 100 characters")
+
+    # Check for valid characters (allow letters, numbers, spaces, basic punctuation)
+    import re
+    if not re.match(r'^[\w\s\-\.\,\!\?\(\)]+$', name, re.UNICODE):
+        raise ValidationError(
+            "Event name contains invalid characters. Only letters, numbers, spaces, and basic punctuation allowed."
+        )
+
+    return name
+
+def sanitize_string(text, max_length=None):
+    """
+    Sanitize user input string
+
+    Args:
+        text: Input string
+        max_length: Maximum length (optional)
+
+    Returns:
+        str: Sanitized string
+    """
+    if not text:
+        return ''
+
+    # Strip whitespace
+    text = text.strip()
+
+    # Remove null bytes
+    text = text.replace('\x00', '')
+
+    # Limit length if specified
+    if max_length and len(text) > max_length:
+        text = text[:max_length]
+
+    return text
+
+def validate_google_drive_access(drive_service, folder_id):
+    """
+    Validate that we have access to a Google Drive folder
+
+    Args:
+        drive_service: Google Drive service instance
+        folder_id: Google Drive folder ID
+
+    Returns:
+        bool: True if accessible
+
+    Raises:
+        GoogleDriveError: If folder is not accessible
+    """
+    try:
+        # Try to get folder metadata
+        folder = drive_service.files().get(
+            fileId=folder_id,
+            fields='id,name,mimeType,capabilities'
+        ).execute()
+
+        # Check if it's actually a folder
+        if folder.get('mimeType') != 'application/vnd.google-apps.folder':
+            raise GoogleDriveError(f"ID {folder_id} is not a folder")
+
+        # Check if we have read permission
+        capabilities = folder.get('capabilities', {})
+        if not capabilities.get('canListChildren', False):
+            raise GoogleDriveError(f"No permission to read folder contents")
+
+        logger.info(f"Validated access to Google Drive folder: {folder.get('name')}")
+        return True
+
+    except HttpError as e:
+        if e.resp.status == 404:
+            raise GoogleDriveError(f"Folder not found: {folder_id}") from e
+        elif e.resp.status == 403:
+            raise GoogleDriveError(f"Access denied to folder: {folder_id}") from e
+        else:
+            raise GoogleDriveError(f"Error accessing folder: {e}") from e
+    except Exception as e:
+        raise GoogleDriveError(f"Unexpected error validating folder access: {e}") from e
+
 # ============================================
 # Background Task Executor
 # ============================================
@@ -615,22 +748,39 @@ def photographer_dashboard():
 
 @app.route('/create_event', methods=['POST'])
 def create_event():
-    event_name = request.form['event_name']
-    event_id = str(uuid.uuid4())
-    event_link = url_for('event_page', event_id=event_id, _external=True)
-    qr_img_filename = f'qr_{event_id}.png'
-    qr_img_path_for_saving = os.path.join('static', qr_img_filename)
-    os.makedirs('static', exist_ok=True)
-    img = qrcode.make(event_link)
-    img.save(qr_img_path_for_saving)
-    
-    db = get_db()
-    db.execute(
-        'INSERT INTO events (id, name, link, qr_path, indexing_status) VALUES (?, ?, ?, ?, ?)',
-        (event_id, event_name, event_link, qr_img_filename, 'Not Started')
-    )
-    db.commit()
-    return redirect(url_for('photographer_dashboard'))
+    try:
+        # Validate and sanitize event name
+        event_name_raw = request.form.get('event_name', '').strip()
+        event_name = validate_event_name(event_name_raw)
+
+        # Generate event ID and link
+        event_id = str(uuid.uuid4())
+        event_link = url_for('event_page', event_id=event_id, _external=True)
+
+        # Generate QR code
+        qr_img_filename = f'qr_{event_id}.png'
+        qr_img_path_for_saving = os.path.join('static', qr_img_filename)
+        os.makedirs('static', exist_ok=True)
+        img = qrcode.make(event_link)
+        img.save(qr_img_path_for_saving)
+
+        # Save to database
+        db = get_db()
+        db.execute(
+            'INSERT INTO events (id, name, link, qr_path, indexing_status) VALUES (?, ?, ?, ?, ?)',
+            (event_id, event_name, event_link, qr_img_filename, 'Not Started')
+        )
+        db.commit()
+
+        logger.info(f"Created event: {event_name} (ID: {event_id})")
+        return redirect(url_for('photographer_dashboard'))
+
+    except ValidationError as e:
+        logger.warning(f"Validation error creating event: {e}")
+        return render_template('error.html', error_message=str(e)), 400
+    except Exception as e:
+        logger.error(f"Error creating event: {e}", exc_info=True)
+        return render_template('error.html', error_message="Failed to create event"), 500
 
 def run_face_indexing_task(event_id, task_id, credentials_dict, folder_id):
     """
@@ -884,9 +1034,27 @@ def delete_event(event_id):
 @app.route('/set_folder/<event_id>/<folder_id>')
 def set_folder(event_id, folder_id):
     try:
+        # Validate IDs
         validate_event_id(event_id)
         validate_folder_id(folder_id)
 
+        # Check authentication
+        if 'credentials' not in session:
+            logger.warning(f"Unauthenticated user attempted to set folder")
+            return redirect(url_for('login_temp'))
+
+        # Validate Google Drive access
+        try:
+            creds = Credentials(**session['credentials'])
+            drive_service = build('drive', 'v3', credentials=creds)
+            validate_google_drive_access(drive_service, folder_id)
+        except GoogleDriveError as e:
+            logger.error(f"Google Drive validation error: {e}")
+            return render_template('error.html',
+                error_message=f"Cannot access folder: {str(e)}"
+            ), 403
+
+        # Update database
         db = get_db()
         db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
         db.commit()
@@ -895,16 +1063,23 @@ def set_folder(event_id, folder_id):
 
     except ValidationError as e:
         logger.error(f"Validation error in set_folder: {e}")
-        return "Invalid event or folder ID", 400
+        return render_template('error.html', error_message=str(e)), 400
     except Exception as e:
         logger.error(f"Error setting folder for event {event_id}: {e}", exc_info=True)
-        return "An error occurred", 500
+        return render_template('error.html', error_message="Failed to link folder"), 500
 
 @app.route('/set_folder_from_link/<event_id>', methods=['POST'])
 def set_folder_from_link(event_id):
     try:
+        # Validate event ID
         validate_event_id(event_id)
 
+        # Check authentication
+        if 'credentials' not in session:
+            logger.warning(f"Unauthenticated user attempted to set folder")
+            return redirect(url_for('login_temp'))
+
+        # Get and validate folder link
         link = request.form.get('folder_link', '').strip()
         if not link:
             raise ValidationError("Folder link is required")
@@ -926,8 +1101,22 @@ def set_folder_from_link(event_id):
 
         except (IndexError, AttributeError, ValidationError) as e:
             logger.warning(f"Invalid folder link format: {link}")
-            return "Invalid Google Drive Folder URL format.", 400
+            return render_template('error.html',
+                error_message="Invalid Google Drive folder URL format."
+            ), 400
 
+        # Validate Google Drive access
+        try:
+            creds = Credentials(**session['credentials'])
+            drive_service = build('drive', 'v3', credentials=creds)
+            validate_google_drive_access(drive_service, folder_id)
+        except GoogleDriveError as e:
+            logger.error(f"Google Drive validation error: {e}")
+            return render_template('error.html',
+                error_message=f"Cannot access folder: {str(e)}"
+            ), 403
+
+        # Update database
         db = get_db()
         db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
         db.commit()
@@ -936,10 +1125,10 @@ def set_folder_from_link(event_id):
 
     except ValidationError as e:
         logger.error(f"Validation error in set_folder_from_link: {e}")
-        return str(e), 400
+        return render_template('error.html', error_message=str(e)), 400
     except Exception as e:
         logger.error(f"Error setting folder from link for event {event_id}: {e}", exc_info=True)
-        return "An error occurred", 500
+        return render_template('error.html', error_message="Failed to link folder"), 500
     
 # --- API Endpoints and Auth Routes (เหมือนเดิม) ---
 @app.route('/api/check_auth')
@@ -1040,13 +1229,15 @@ def search_faces(event_id):
             logger.warning(f"Too many files uploaded for event {event_id}: {len(files)}")
             return "Maximum 3 images allowed.", 400
 
-        # Validate each file
+        # Validate each file (type and size)
         for file in files:
             if file and file.filename:
                 try:
                     validate_image_file(file)
+                    validate_file_size(file, max_size_mb=10)
                 except ValidationError as e:
-                    return str(e), 400
+                    logger.warning(f"File validation error: {e}")
+                    return render_template('error.html', error_message=str(e)), 400
 
         logger.info(f"Processing {len(files)} uploaded image(s) for event {event_id}")
 
