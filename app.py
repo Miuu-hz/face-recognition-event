@@ -21,6 +21,7 @@ import time
 from datetime import datetime
 from PIL import Image
 from functools import wraps
+from urllib.parse import quote
 
 from flask import Flask, redirect, request, session, url_for, render_template, jsonify, g
 from flask_executor import Executor
@@ -773,7 +774,10 @@ def create_event():
         db.commit()
 
         logger.info(f"Created event: {event_name} (ID: {event_id})")
-        return redirect(url_for('photographer_dashboard'))
+
+        # Redirect with success message
+        success_msg = f"Event '{event_name}' created successfully!"
+        return redirect(url_for('photographer_dashboard') + f'?success={quote(success_msg)}')
 
     except ValidationError as e:
         logger.warning(f"Validation error creating event: {e}")
@@ -988,8 +992,9 @@ def start_indexing(event_id):
 
         logger.info(f"✓ Face indexing task created: {task_id} for event: {event_data['name']}")
 
-        # Redirect to dashboard (task runs in background)
-        return redirect(url_for('photographer_dashboard'))
+        # Redirect to dashboard with success message (task runs in background)
+        success_msg = f"Face indexing started for '{event_data['name']}'"
+        return redirect(url_for('photographer_dashboard') + f'?success={quote(success_msg)}')
 
     except ValidationError as e:
         logger.error(f"Validation error in start_indexing: {e}")
@@ -1019,10 +1024,12 @@ def delete_event(event_id):
             db.execute('DELETE FROM events WHERE id = ?', (event_id,))
             db.commit()
             logger.info(f"Deleted event and associated faces: {event_id}")
+
+            # Redirect with success message
+            return redirect(url_for('photographer_dashboard') + f'?success={quote("Event deleted successfully")}')
         else:
             logger.warning(f"Attempted to delete non-existent event: {event_id}")
-
-        return redirect(url_for('photographer_dashboard'))
+            return redirect(url_for('photographer_dashboard'))
 
     except ValidationError as e:
         logger.error(f"Validation error in delete_event: {e}")
@@ -1059,7 +1066,9 @@ def set_folder(event_id, folder_id):
         db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
         db.commit()
         logger.info(f"Set folder {folder_id} for event {event_id}")
-        return redirect(url_for('photographer_dashboard'))
+
+        # Redirect with success message
+        return redirect(url_for('photographer_dashboard') + f'?success={quote("Folder linked successfully!")}')
 
     except ValidationError as e:
         logger.error(f"Validation error in set_folder: {e}")
@@ -1121,7 +1130,9 @@ def set_folder_from_link(event_id):
         db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
         db.commit()
         logger.info(f"Set folder {folder_id} for event {event_id} via link")
-        return redirect(url_for('photographer_dashboard'))
+
+        # Redirect with success message
+        return redirect(url_for('photographer_dashboard') + f'?success={quote("Folder linked successfully!")}')
 
     except ValidationError as e:
         logger.error(f"Validation error in set_folder_from_link: {e}")

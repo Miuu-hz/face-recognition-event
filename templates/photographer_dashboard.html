@@ -310,6 +310,141 @@
             margin-top: 0.5rem;
         }
 
+        /* Toast Notification Styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            border-left: 4px solid;
+            min-width: 300px;
+            max-width: 400px;
+            animation: slideIn 0.3s ease;
+            pointer-events: all;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toast.success {
+            border-left-color: var(--sage-green);
+        }
+
+        .toast.error {
+            border-left-color: #C44536;
+        }
+
+        .toast.info {
+            border-left-color: var(--primary-brown);
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: var(--dark-brown);
+            margin-bottom: 0.25rem;
+        }
+
+        .toast-message {
+            font-size: 0.9rem;
+            color: var(--warm-gray);
+        }
+
+        .toast-close {
+            cursor: pointer;
+            color: var(--warm-gray);
+            font-size: 1.2rem;
+            padding: 0 5px;
+            transition: color 0.2s;
+        }
+
+        .toast-close:hover {
+            color: var(--dark-brown);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.hiding {
+            animation: slideOut 0.3s ease;
+        }
+
+        /* Form Validation Styles */
+        .form-error {
+            color: #C44536;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .form-error.show {
+            display: block;
+        }
+
+        input.error, input[type="url"].error {
+            border-color: #C44536;
+            background: #fff5f5;
+        }
+
+        /* Button Loading States */
+        .btn.loading {
+            position: relative;
+            color: transparent;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
+        .btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid transparent;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
         .no-events {
             text-align: center;
             padding: 3rem;
@@ -471,17 +606,21 @@
     </style>
 </head>
 <body>
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <h1>📸 Photographer Dashboard</h1>
         
         <div class="section">
             <h2>✨ Create New Event</h2>
-            <form action="/create_event" method="post" class="create-form">
+            <form action="/create_event" method="post" class="create-form" id="createEventForm" onsubmit="return handleEventFormSubmit(event)">
                 <div class="form-group">
                     <label for="event_name">Event Name</label>
-                    <input type="text" id="event_name" name="event_name" placeholder="Enter your event name..." required>
+                    <input type="text" id="event_name" name="event_name" placeholder="Enter your event name..." required minlength="3" maxlength="100">
+                    <div class="form-error" id="event_name_error"></div>
                 </div>
-                <button type="submit" class="btn btn-primary">Create Event</button>
+                <button type="submit" class="btn btn-primary" id="createEventBtn">Create Event</button>
             </form>
         </div>
 
@@ -508,7 +647,7 @@
                                     <p><strong>📁 Linked Folder:</strong> {{ event.drive_folder_id[:20] }}...</p>
 
                                     {% if event.indexing_status == 'Not Started' %}
-                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">🚀 Start Face Indexing</a>
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary" onclick="handleStartIndexing(event, this)">🚀 Start Face Indexing</a>
                                     {% elif event.indexing_status == 'In Progress' %}
                                         <div class="status in-progress">
                                             <span class="loading"></span>⏳ Indexing in progress...
@@ -586,9 +725,12 @@
                 
                 <div class="paste-section">
                     <h4 style="color: var(--primary-brown); margin-bottom: 1rem;">🔗 Or paste a Google Drive folder link:</h4>
-                    <form id="pasteForm" class="paste-form">
-                        <input type="url" id="folderLink" placeholder="https://drive.google.com/drive/folders/..." required>
-                        <button type="submit" class="btn btn-secondary">Use Link</button>
+                    <form id="pasteForm" class="paste-form" onsubmit="return handlePasteFormSubmit(event)">
+                        <div style="flex: 1;">
+                            <input type="url" id="folderLink" placeholder="https://drive.google.com/drive/folders/..." required>
+                            <div class="form-error" id="folder_link_error"></div>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" id="pasteLinkBtn">Use Link</button>
                     </form>
                 </div>
             </div>
@@ -599,6 +741,207 @@
         let currentEventId = '';
         let progressPollers = {}; // Store polling intervals
         let taskStartTimes = {}; // Store task start times for ETA calculation
+
+        // ============================================
+        // Toast Notification System
+        // ============================================
+
+        /**
+         * Show toast notification
+         * @param {string} message - Message to display
+         * @param {string} type - Toast type (success, error, info)
+         * @param {number} duration - Duration in ms (default: 5000)
+         */
+        function showToast(message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️'
+            };
+
+            const titles = {
+                success: 'Success',
+                error: 'Error',
+                info: 'Info'
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type]}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${titles[type]}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <div class="toast-close" onclick="closeToast(this)">×</div>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto-hide after duration
+            setTimeout(() => {
+                closeToast(toast.querySelector('.toast-close'));
+            }, duration);
+        }
+
+        /**
+         * Close toast notification
+         */
+        function closeToast(closeBtn) {
+            const toast = closeBtn.closest('.toast');
+            toast.classList.add('hiding');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }
+
+        // ============================================
+        // Form Validation
+        // ============================================
+
+        /**
+         * Validate event name
+         */
+        function validateEventName(name) {
+            const errors = [];
+
+            if (!name || name.trim().length === 0) {
+                errors.push('Event name is required');
+            } else if (name.trim().length < 3) {
+                errors.push('Event name must be at least 3 characters');
+            } else if (name.trim().length > 100) {
+                errors.push('Event name must not exceed 100 characters');
+            } else if (!/^[\w\s\-\.\,\!\?\(\)]+$/u.test(name)) {
+                errors.push('Event name contains invalid characters');
+            }
+
+            return errors;
+        }
+
+        /**
+         * Show inline error for input
+         */
+        function showInputError(inputId, errorId, message) {
+            const input = document.getElementById(inputId);
+            const errorDiv = document.getElementById(errorId);
+
+            input.classList.add('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        /**
+         * Clear inline error for input
+         */
+        function clearInputError(inputId, errorId) {
+            const input = document.getElementById(inputId);
+            const errorDiv = document.getElementById(errorId);
+
+            input.classList.remove('error');
+            errorDiv.classList.remove('show');
+        }
+
+        /**
+         * Handle event form submission
+         */
+        function handleEventFormSubmit(event) {
+            event.preventDefault();
+
+            const form = document.getElementById('createEventForm');
+            const eventNameInput = document.getElementById('event_name');
+            const submitBtn = document.getElementById('createEventBtn');
+            const eventName = eventNameInput.value;
+
+            // Clear previous errors
+            clearInputError('event_name', 'event_name_error');
+
+            // Validate
+            const errors = validateEventName(eventName);
+
+            if (errors.length > 0) {
+                showInputError('event_name', 'event_name_error', errors[0]);
+                showToast(errors[0], 'error');
+                return false;
+            }
+
+            // Show loading state
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            // Submit form
+            form.submit();
+
+            return true;
+        }
+
+        /**
+         * Add button loading state
+         */
+        function setButtonLoading(button, loading) {
+            if (loading) {
+                button.classList.add('loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
+
+        /**
+         * Handle start indexing click
+         */
+        function handleStartIndexing(event, button) {
+            event.preventDefault();
+
+            setButtonLoading(button, true);
+            showToast('Starting face indexing...', 'info');
+
+            // Navigate after short delay
+            setTimeout(() => {
+                window.location.href = button.href;
+            }, 500);
+        }
+
+        /**
+         * Handle folder link button click
+         */
+        function handleLinkFolderClick(button) {
+            setButtonLoading(button, true);
+
+            // Loading will be cleared when modal opens
+            setTimeout(() => {
+                setButtonLoading(button, false);
+            }, 500);
+        }
+
+        // Real-time validation for event name
+        document.addEventListener('DOMContentLoaded', function() {
+            const eventNameInput = document.getElementById('event_name');
+            if (eventNameInput) {
+                eventNameInput.addEventListener('input', function() {
+                    const errors = validateEventName(this.value);
+                    if (errors.length > 0) {
+                        showInputError('event_name', 'event_name_error', errors[0]);
+                    } else {
+                        clearInputError('event_name', 'event_name_error');
+                    }
+                });
+            }
+
+            // Check URL parameters for messages (from server redirects)
+            const urlParams = new URLSearchParams(window.location.search);
+            const success = urlParams.get('success');
+            const error = urlParams.get('error');
+
+            if (success) {
+                showToast(decodeURIComponent(success), 'success');
+            }
+            if (error) {
+                showToast(decodeURIComponent(error), 'error');
+            }
+        });
 
         // Modal functionality
         const modal = document.getElementById('folderModal');
@@ -679,25 +1022,65 @@
             window.location.href = `/set_folder/${currentEventId}/${folderId}`;
         }
         
-        // Handle paste form
-        document.getElementById('pasteForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const link = document.getElementById('folderLink').value;
-            
+        /**
+         * Validate Google Drive folder URL
+         */
+        function validateFolderUrl(url) {
+            const errors = [];
+
+            if (!url || url.trim().length === 0) {
+                errors.push('Folder URL is required');
+            } else if (!url.includes('drive.google.com')) {
+                errors.push('Must be a Google Drive URL');
+            } else if (!url.includes('/folders/')) {
+                errors.push('Must be a folder URL (not a file)');
+            }
+
+            return errors;
+        }
+
+        /**
+         * Handle paste form submission
+         */
+        function handlePasteFormSubmit(event) {
+            event.preventDefault();
+
+            const linkInput = document.getElementById('folderLink');
+            const submitBtn = document.getElementById('pasteLinkBtn');
+            const link = linkInput.value;
+
+            // Clear previous errors
+            clearInputError('folderLink', 'folder_link_error');
+
+            // Validate
+            const errors = validateFolderUrl(link);
+
+            if (errors.length > 0) {
+                showInputError('folderLink', 'folder_link_error', errors[0]);
+                showToast(errors[0], 'error');
+                return false;
+            }
+
+            // Show loading state
+            setButtonLoading(submitBtn, true);
+            showToast('Linking folder...', 'info');
+
             // Create a form and submit
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = `/set_folder_from_link/${currentEventId}`;
-            
+
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'folder_link';
             input.value = link;
-            
+
             form.appendChild(input);
             document.body.appendChild(form);
             form.submit();
-        });
+
+            return true;
+        }
         
         // Add keyboard support for modal
         document.addEventListener('keydown', function(e) {
@@ -804,16 +1187,19 @@
                 if (taskData.status === 'completed') {
                     console.log(`Task completed for event ${eventId}`);
                     stopPolling(eventId);
+                    showToast('Face indexing completed successfully! 🎉', 'success');
                     // Reload page to show updated status
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => location.reload(), 1500);
                 }
 
                 // Handle task failure
                 if (taskData.status === 'failed') {
                     console.error(`Task failed for event ${eventId}:`, taskData.error);
                     stopPolling(eventId);
+                    const errorMsg = taskData.error || 'An error occurred during indexing';
+                    showToast(`Indexing failed: ${errorMsg}`, 'error', 7000);
                     // Reload page to show error
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => location.reload(), 2000);
                 }
 
             } catch (error) {
