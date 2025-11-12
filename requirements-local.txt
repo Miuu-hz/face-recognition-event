@@ -3,31 +3,44 @@
 # ============================================
 # ใช้สำหรับรันระบบบนเครื่อง local ด้วย localtunnel
 # ติดตั้งด้วย: pip install -r requirements-local.txt
+#
+# Requirements: Python 3.10 - 3.13
 # ============================================
 
 # Web Framework
-Flask==2.3.2
+Flask==3.0.0
+Werkzeug==3.0.1
 
 # Google Drive Integration
-google-auth==2.22.0
-google-auth-oauthlib==1.0.0
-google-auth-httplib2==0.1.0
-google-api-python-client==2.95.0
+google-auth==2.27.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.111.0
 
 # QR Code Generation
 qrcode==7.4.2
-Pillow==10.0.0
+Pillow==10.2.0
 
 # Face Recognition (ใช้ RAM เยอะ)
 # หมายเหตุ: การติดตั้งอาจใช้เวลา 5-10 นาที เนื่องจากต้อง compile dlib
+# dlib requires: cmake, build-essential (Linux), Visual Studio Build Tools (Windows)
 face-recognition==1.3.0
-numpy==1.24.3
+dlib==19.24.2
+numpy==1.26.3
 
 # Environment Variables Management
-python-dotenv==1.0.0
+python-dotenv==1.0.1
 
 # Background Task Processing
 Flask-Executor==1.0.0
+
+# Build Dependencies (สำหรับ compile dlib)
+# setuptools>=65.5.1
+# wheel>=0.38.0
+
+# Optional: PyTorch for GPU detection (uncomment ถ้าต้องการ GPU support)
+# torch==2.1.2
+# torchvision==0.16.2
 
 # Optional: สำหรับรัน production-like server
 # แนะนำให้ใช้ Flask development server สำหรับ local testing
