@@ -1,0 +1,85 @@
+[2025-11-13 09:46:53] INFO [__main__:107] - ============================================================
+[2025-11-13 09:46:53] INFO [__main__:108] - Face Recognition Event System - Starting
+[2025-11-13 09:46:53] INFO [__main__:109] - ============================================================
+[2025-11-13 09:46:53] INFO [__main__:432] - ==================================================
+[2025-11-13 09:46:53] INFO [__main__:433] - Face Recognition Configuration:
+[2025-11-13 09:46:53] INFO [__main__:434] - ==================================================
+[2025-11-13 09:46:53] INFO [__main__:435] - Device:       CPU
+[2025-11-13 09:46:53] INFO [__main__:436] - Model:        HOG (HOG - Fast Processing)
+[2025-11-13 09:46:53] INFO [__main__:437] -   (Setting: auto)
+[2025-11-13 09:46:53] INFO [__main__:438] - Tolerance:    0.5 (lower = stricter)
+[2025-11-13 09:46:53] INFO [__main__:439] - Batch Size:   20 images
+[2025-11-13 09:46:53] INFO [__main__:440] - Num Jitters:  1
+[2025-11-13 09:46:53] INFO [__main__:441] - ==================================================
+[2025-11-13 09:46:53] INFO [werkzeug:97] - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:10000
+ * Running on http://192.168.1.164:10000
+[2025-11-13 09:46:53] INFO [werkzeug:97] - [33mPress CTRL+C to quit[0m
+[2025-11-13 09:46:53] INFO [werkzeug:97] -  * Restarting with stat
+[2025-11-13 09:46:56] INFO [__main__:107] - ============================================================
+[2025-11-13 09:46:56] INFO [__main__:108] - Face Recognition Event System - Starting
+[2025-11-13 09:46:56] INFO [__main__:109] - ============================================================
+[2025-11-13 09:46:56] INFO [__main__:432] - ==================================================
+[2025-11-13 09:46:56] INFO [__main__:433] - Face Recognition Configuration:
+[2025-11-13 09:46:56] INFO [__main__:434] - ==================================================
+[2025-11-13 09:46:56] INFO [__main__:435] - Device:       CPU
+[2025-11-13 09:46:56] INFO [__main__:436] - Model:        HOG (HOG - Fast Processing)
+[2025-11-13 09:46:56] INFO [__main__:437] -   (Setting: auto)
+[2025-11-13 09:46:56] INFO [__main__:438] - Tolerance:    0.5 (lower = stricter)
+[2025-11-13 09:46:56] INFO [__main__:439] - Batch Size:   20 images
+[2025-11-13 09:46:56] INFO [__main__:440] - Num Jitters:  1
+[2025-11-13 09:46:56] INFO [__main__:441] - ==================================================
+[2025-11-13 09:46:56] WARNING [werkzeug:97] -  * Debugger is active!
+[2025-11-13 09:46:56] INFO [werkzeug:97] -  * Debugger PIN: 290-758-708
+[2025-11-13 09:48:00] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:00] "[32mGET / HTTP/1.1[0m" 302 -
+[2025-11-13 09:48:00] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:00] "GET /dashboard/photographer HTTP/1.1" 200 -
+[2025-11-13 09:48:01] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:01] "GET /static/qr_16857558-1afc-4e5d-86f3-36771f565ae8.png HTTP/1.1" 200 -
+[2025-11-13 09:48:01] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:01] "GET /static/qr_19db6e9f-135d-4076-9a18-431a9abb563a.png HTTP/1.1" 200 -
+[2025-11-13 09:48:02] WARNING [__main__:141] - 404 error: http://127.0.0.1:10000/favicon.ico
+[2025-11-13 09:48:02] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:02] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+[2025-11-13 09:48:26] DEBUG [__main__:1019] - Deleted QR code: static\qr_19db6e9f-135d-4076-9a18-431a9abb563a.png
+[2025-11-13 09:48:26] INFO [__main__:1026] - Deleted event and associated faces: 19db6e9f-135d-4076-9a18-431a9abb563a
+[2025-11-13 09:48:26] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:26] "[32mPOST /delete_event/19db6e9f-135d-4076-9a18-431a9abb563a HTTP/1.1[0m" 302 -
+[2025-11-13 09:48:26] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:26] "GET /dashboard/photographer?success=Event%20deleted%20successfully HTTP/1.1" 200 -
+[2025-11-13 09:48:26] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:26] "[36mGET /static/qr_16857558-1afc-4e5d-86f3-36771f565ae8.png HTTP/1.1[0m" 304 -
+[2025-11-13 09:48:29] INFO [__main__:776] - Created event: localrun (ID: 983813c3-c64d-40ff-a533-a70ffb53fb83)
+[2025-11-13 09:48:29] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:29] "[32mPOST /create_event HTTP/1.1[0m" 302 -
+[2025-11-13 09:48:29] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:29] "GET /dashboard/photographer?success=Event%20'localrun'%20created%20successfully! HTTP/1.1" 200 -
+[2025-11-13 09:48:29] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:29] "[36mGET /static/qr_16857558-1afc-4e5d-86f3-36771f565ae8.png HTTP/1.1[0m" 304 -
+[2025-11-13 09:48:29] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:29] "GET /static/qr_983813c3-c64d-40ff-a533-a70ffb53fb83.png HTTP/1.1" 200 -
+[2025-11-13 09:48:40] INFO [werkzeug:97] - 127.0.0.1 - - [13/Nov/2025 09:48:40] "GET /event/983813c3-c64d-40ff-a533-a70ffb53fb83 HTTP/1.1" 200 -
+[2025-11-13 09:59:06] INFO [__main__:107] - ============================================================
+[2025-11-13 09:59:06] INFO [__main__:108] - Face Recognition Event System - Starting
+[2025-11-13 09:59:06] INFO [__main__:109] - ============================================================
+[2025-11-13 09:59:06] INFO [__main__:432] - ==================================================
+[2025-11-13 09:59:06] INFO [__main__:433] - Face Recognition Configuration:
+[2025-11-13 09:59:06] INFO [__main__:434] - ==================================================
+[2025-11-13 09:59:06] INFO [__main__:435] - Device:       CPU
+[2025-11-13 09:59:06] INFO [__main__:436] - Model:        HOG (HOG - Fast Processing)
+[2025-11-13 09:59:06] INFO [__main__:437] -   (Setting: auto)
+[2025-11-13 09:59:06] INFO [__main__:438] - Tolerance:    0.5 (lower = stricter)
+[2025-11-13 09:59:06] INFO [__main__:439] - Batch Size:   20 images
+[2025-11-13 09:59:06] INFO [__main__:440] - Num Jitters:  1
+[2025-11-13 09:59:06] INFO [__main__:441] - ==================================================
+[2025-11-13 09:59:06] INFO [werkzeug:97] - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:10000
+ * Running on http://192.168.1.164:10000
+[2025-11-13 09:59:06] INFO [werkzeug:97] - [33mPress CTRL+C to quit[0m
+[2025-11-13 09:59:06] INFO [werkzeug:97] -  * Restarting with stat
+[2025-11-13 09:59:08] INFO [__main__:107] - ============================================================
+[2025-11-13 09:59:08] INFO [__main__:108] - Face Recognition Event System - Starting
+[2025-11-13 09:59:08] INFO [__main__:109] - ============================================================
+[2025-11-13 09:59:08] INFO [__main__:432] - ==================================================
+[2025-11-13 09:59:08] INFO [__main__:433] - Face Recognition Configuration:
+[2025-11-13 09:59:08] INFO [__main__:434] - ==================================================
+[2025-11-13 09:59:08] INFO [__main__:435] - Device:       CPU
+[2025-11-13 09:59:08] INFO [__main__:436] - Model:        HOG (HOG - Fast Processing)
+[2025-11-13 09:59:08] INFO [__main__:437] -   (Setting: auto)
+[2025-11-13 09:59:08] INFO [__main__:438] - Tolerance:    0.5 (lower = stricter)
+[2025-11-13 09:59:08] INFO [__main__:439] - Batch Size:   20 images
+[2025-11-13 09:59:08] INFO [__main__:440] - Num Jitters:  1
+[2025-11-13 09:59:08] INFO [__main__:441] - ==================================================
+[2025-11-13 09:59:09] WARNING [werkzeug:97] -  * Debugger is active!
+[2025-11-13 09:59:09] INFO [werkzeug:97] -  * Debugger PIN: 290-758-708
