@@ -12,6 +12,7 @@ CREATE TABLE events (
     indexing_status TEXT DEFAULT 'Not Started',
     indexed_photos INTEGER DEFAULT 0,
     total_faces INTEGER DEFAULT 0,
+    task_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
