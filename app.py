@@ -163,18 +163,34 @@ DATABASE = os.getenv('DATABASE_PATH', 'database.db')
 
 # GPU/CPU Detection
 def detect_gpu():
-    """Detect if CUDA-capable GPU is available"""
+    """Detect if GPU is available for face recognition
+
+    Returns True if:
+    1. dlib was compiled with CUDA support, OR
+    2. nvidia-smi detects GPU (as fallback check)
+    """
+    # Method 1: Check if dlib has CUDA support (most accurate)
     try:
-        import torch
-        return torch.cuda.is_available()
-    except ImportError:
-        # If PyTorch is not installed, check for CUDA another way
-        try:
-            import subprocess
-            result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
-            return result.returncode == 0
-        except:
-            return False
+        import dlib
+        if hasattr(dlib, 'DLIB_USE_CUDA') and dlib.DLIB_USE_CUDA:
+            return True
+    except:
+        pass
+
+    # Method 2: Check nvidia-smi as fallback
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['nvidia-smi'],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        return result.returncode == 0
+    except:
+        pass
+
+    return False
 
 has_gpu = detect_gpu()
 
