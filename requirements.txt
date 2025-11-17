@@ -1,11 +1,45 @@
+# ============================================
+# Face Recognition Event System - Requirements
+# ============================================
+
+# Web Framework
 Flask==2.3.2
+
+# Google Cloud & OAuth
 google-auth==2.22.0
 google-auth-oauthlib==1.0.0
 google-auth-httplib2==0.1.0
 google-api-python-client==2.95.0
+
+# Image Processing & QR Code
 qrcode==7.4.2
 Pillow==10.0.0
+
+# Face Recognition
+# ⚠️ WARNING: face-recognition requires dlib which needs C++ compiler!
+# See REQUIREMENTS.md for detailed installation instructions
 face-recognition==1.3.0
+
+# Note: dlib is auto-installed by face-recognition
+# GPU support: NVIDIA CUDA only (AMD/Intel/Apple not supported)
+# CPU-only: Works without GPU
+
+# Numerical Computing
 numpy==1.24.3
+
+# Production Server
 gunicorn==21.2.0
+
+# Environment Configuration
 python-dotenv==1.0.0
+
+# ============================================
+# System Requirements:
+# ============================================
+# - Python 3.8+
+# - C++ Compiler (gcc/clang/MSVC)
+# - CMake
+# - (Optional) NVIDIA GPU with CUDA for faster processing
+#
+# See REQUIREMENTS.md for complete installation guide
+# ============================================
