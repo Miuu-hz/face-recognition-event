@@ -729,6 +729,55 @@ def get_event_task(event_id):
 
     return jsonify(task.to_dict()), 200
 
+@app.route('/api/event/<event_id>/task/stream')
+def stream_event_task(event_id):
+    """Server-Sent Events endpoint for real-time task updates"""
+    def event_stream():
+        """Generator function that yields task updates"""
+        db = sqlite3.connect(DATABASE)
+        db.row_factory = sqlite3.Row
+
+        try:
+            event_data = db.execute('SELECT task_id FROM events WHERE id = ?', (event_id,)).fetchone()
+
+            if not event_data:
+                yield f"data: {json.dumps({'error': 'Event not found'})}\n\n"
+                return
+
+            task_id = event_data['task_id']
+            if not task_id:
+                yield f"data: {json.dumps({'error': 'No task found'})}\n\n"
+                return
+
+            task = get_task(task_id)
+            if not task:
+                yield f"data: {json.dumps({'error': 'Task not found'})}\n\n"
+                return
+
+            # Stream updates until task completes or fails
+            import time
+            while True:
+                task_data = task.to_dict()
+                yield f"data: {json.dumps(task_data)}\n\n"
+
+                # Stop streaming if task is done
+                if task_data['status'] in ['completed', 'failed']:
+                    break
+
+                time.sleep(0.5)  # Update every 0.5 seconds
+
+        finally:
+            db.close()
+
+    return app.response_class(
+        event_stream(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
 @app.route('/event/<event_id>')
 def event_page(event_id):
     db = get_db()

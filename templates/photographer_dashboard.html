@@ -640,84 +640,91 @@
             return `${secs}s`;
         }
 
-        // Auto-update indexing status
-        function checkTaskStatus(eventId) {
-            fetch(`/api/event/${eventId}/task`)
-                .then(response => response.json())
-                .then(data => {
-                    const statusDiv = document.getElementById(`status-${eventId}`);
-                    if (!statusDiv) return;
+        // Update UI with task data
+        function updateTaskUI(eventId, task) {
+            const statusDiv = document.getElementById(`status-${eventId}`);
+            if (!statusDiv) return;
 
-                    if (data.task) {
-                        const task = data.task;
+            if (task.status === 'running') {
+                // Update progress with visual bar
+                const progressPercent = task.progress_percent || 0;
+                const currentItem = task.current_item || 'Processing...';
+                const facesFound = task.faces_found || 0;
+                const eta = task.eta_seconds ? formatTime(task.eta_seconds) : 'Calculating...';
 
-                        if (task.status === 'running') {
-                            // Update progress with visual bar
-                            const progressPercent = task.progress_percent || 0;
-                            const currentItem = task.current_item || 'Processing...';
-                            const facesFound = task.faces_found || 0;
-                            const eta = task.eta_seconds ? formatTime(task.eta_seconds) : 'Calculating...';
+                statusDiv.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 0.5rem;">⏳ Indexing in progress...</div>
 
-                            statusDiv.innerHTML = `
-                                <div style="font-weight: bold; margin-bottom: 0.5rem;">⏳ Indexing in progress...</div>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: ${progressPercent}%">
+                            ${progressPercent}%
+                        </div>
+                    </div>
 
-                                <div class="progress-container">
-                                    <div class="progress-bar" style="width: ${progressPercent}%">
-                                        ${progressPercent}%
-                                    </div>
-                                </div>
+                    <div class="progress-info">
+                        <div class="progress-stats">
+                            <div class="stat-item">
+                                <strong>📸</strong> ${task.progress}/${task.total} photos
+                            </div>
+                            <div class="stat-item">
+                                <strong>👤</strong> ${facesFound} faces found
+                            </div>
+                            <div class="stat-item">
+                                <strong>⏱️</strong> ETA: ${eta}
+                            </div>
+                        </div>
+                    </div>
 
-                                <div class="progress-info">
-                                    <div class="progress-stats">
-                                        <div class="stat-item">
-                                            <strong>📸</strong> ${task.progress}/${task.total} photos
-                                        </div>
-                                        <div class="stat-item">
-                                            <strong>👤</strong> ${facesFound} faces found
-                                        </div>
-                                        <div class="stat-item">
-                                            <strong>⏱️</strong> ETA: ${eta}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.8;">
-                                    <strong>Current:</strong> ${currentItem}
-                                </div>
-                            `;
-                        } else if (task.status === 'completed') {
-                            // Reload page to show updated status
-                            location.reload();
-                        } else if (task.status === 'failed') {
-                            // Show error
-                            statusDiv.className = 'status';
-                            statusDiv.style.backgroundColor = '#f8d7da';
-                            statusDiv.style.color = '#721c24';
-                            statusDiv.innerHTML = `⚠️ Indexing Failed<br><small style="font-weight: normal;">${task.error || 'Unknown error'}</small>`;
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking task status:', error);
-                });
+                    <div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.8;">
+                        <strong>Current:</strong> ${currentItem}
+                    </div>
+                `;
+            } else if (task.status === 'completed') {
+                // Reload page to show updated status
+                location.reload();
+            } else if (task.status === 'failed') {
+                // Show error
+                statusDiv.className = 'status';
+                statusDiv.style.backgroundColor = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                statusDiv.innerHTML = `⚠️ Indexing Failed<br><small style="font-weight: normal;">${task.error || 'Unknown error'}</small>`;
+            }
         }
 
-        // Poll status for all events with "In Progress" status
-        function pollAllTasks() {
+        // Connect to SSE stream for real-time updates
+        function connectTaskStream(eventId) {
+            const eventSource = new EventSource(`/api/event/${eventId}/task/stream`);
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+
+                if (data.error) {
+                    console.error('SSE Error:', data.error);
+                    eventSource.close();
+                    return;
+                }
+
+                updateTaskUI(eventId, data);
+
+                // Close connection when task is done
+                if (data.status === 'completed' || data.status === 'failed') {
+                    eventSource.close();
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('SSE Connection Error:', error);
+                eventSource.close();
+            };
+        }
+
+        // Start SSE streams for all events with "In Progress" status
+        document.addEventListener('DOMContentLoaded', function() {
             const statusDivs = document.querySelectorAll('.status.in-progress[data-event-id]');
             statusDivs.forEach(div => {
                 const eventId = div.getAttribute('data-event-id');
-                checkTaskStatus(eventId);
+                connectTaskStream(eventId);
             });
-        }
-
-        // Start polling when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check immediately
-            pollAllTasks();
-
-            // Then poll every 2 seconds
-            setInterval(pollAllTasks, 2000);
         });
     </script>
 </body>
