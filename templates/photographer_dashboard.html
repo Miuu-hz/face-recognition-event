@@ -420,7 +420,7 @@
                                     {% if event.indexing_status == 'Not Started' %}
                                         <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">🚀 Start Face Indexing</a>
                                     {% elif event.indexing_status == 'In Progress' %}
-                                        <div class="status in-progress">
+                                        <div class="status in-progress" id="status-{{ event.id }}" data-event-id="{{ event.id }}">
                                             <span class="loading"></span>⏳ Indexing in progress...
                                         </div>
                                     {% elif event.indexing_status == 'Completed' %}
@@ -582,6 +582,61 @@
             if (e.key === 'Escape' && modal.style.display === 'block') {
                 modal.style.display = 'none';
             }
+        });
+
+        // Auto-update indexing status
+        function checkTaskStatus(eventId) {
+            fetch(`/api/event/${eventId}/task`)
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById(`status-${eventId}`);
+                    if (!statusDiv) return;
+
+                    if (data.task) {
+                        const task = data.task;
+
+                        if (task.status === 'running') {
+                            // Update progress
+                            const progressPercent = task.progress_percent || 0;
+                            const currentItem = task.current_item || 'Processing...';
+
+                            statusDiv.innerHTML = `
+                                <span class="loading"></span>⏳ Indexing: ${progressPercent}%
+                                <br><small style="font-weight: normal; opacity: 0.8;">${currentItem}</small>
+                            `;
+                        } else if (task.status === 'completed') {
+                            // Reload page to show updated status
+                            location.reload();
+                        } else if (task.status === 'failed') {
+                            // Show error
+                            statusDiv.className = 'status';
+                            statusDiv.style.backgroundColor = '#f8d7da';
+                            statusDiv.style.color = '#721c24';
+                            statusDiv.innerHTML = `⚠️ Indexing Failed<br><small style="font-weight: normal;">${task.error || 'Unknown error'}</small>`;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking task status:', error);
+                });
+        }
+
+        // Poll status for all events with "In Progress" status
+        function pollAllTasks() {
+            const statusDivs = document.querySelectorAll('.status.in-progress[data-event-id]');
+            statusDivs.forEach(div => {
+                const eventId = div.getAttribute('data-event-id');
+                checkTaskStatus(eventId);
+            });
+        }
+
+        // Start polling when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check immediately
+            pollAllTasks();
+
+            // Then poll every 2 seconds
+            setInterval(pollAllTasks, 2000);
         });
     </script>
 </body>
