@@ -220,6 +220,49 @@
             border: 1px solid #B8E6B8;
         }
 
+        /* Progress Bar Styles */
+        .progress-container {
+            width: 100%;
+            background: #F0E68C;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 1rem 0;
+            border: 2px solid var(--light-brown);
+        }
+
+        .progress-bar {
+            height: 30px;
+            background: linear-gradient(90deg, var(--sage-green) 0%, var(--primary-brown) 100%);
+            border-radius: 8px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--dark-brown);
+        }
+
+        .progress-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
         .no-events {
             text-align: center;
             padding: 3rem;
@@ -584,6 +627,19 @@
             }
         });
 
+        // Format seconds to human readable time (e.g., "2m 30s" or "45s")
+        function formatTime(seconds) {
+            if (!seconds || seconds <= 0) return 'Calculating...';
+
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+
+            if (minutes > 0) {
+                return `${minutes}m ${secs}s`;
+            }
+            return `${secs}s`;
+        }
+
         // Auto-update indexing status
         function checkTaskStatus(eventId) {
             fetch(`/api/event/${eventId}/task`)
@@ -596,13 +652,38 @@
                         const task = data.task;
 
                         if (task.status === 'running') {
-                            // Update progress
+                            // Update progress with visual bar
                             const progressPercent = task.progress_percent || 0;
                             const currentItem = task.current_item || 'Processing...';
+                            const facesFound = task.faces_found || 0;
+                            const eta = task.eta_seconds ? formatTime(task.eta_seconds) : 'Calculating...';
 
                             statusDiv.innerHTML = `
-                                <span class="loading"></span>⏳ Indexing: ${progressPercent}%
-                                <br><small style="font-weight: normal; opacity: 0.8;">${currentItem}</small>
+                                <div style="font-weight: bold; margin-bottom: 0.5rem;">⏳ Indexing in progress...</div>
+
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${progressPercent}%">
+                                        ${progressPercent}%
+                                    </div>
+                                </div>
+
+                                <div class="progress-info">
+                                    <div class="progress-stats">
+                                        <div class="stat-item">
+                                            <strong>📸</strong> ${task.progress}/${task.total} photos
+                                        </div>
+                                        <div class="stat-item">
+                                            <strong>👤</strong> ${facesFound} faces found
+                                        </div>
+                                        <div class="stat-item">
+                                            <strong>⏱️</strong> ETA: ${eta}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.8;">
+                                    <strong>Current:</strong> ${currentItem}
+                                </div>
                             `;
                         } else if (task.status === 'completed') {
                             // Reload page to show updated status

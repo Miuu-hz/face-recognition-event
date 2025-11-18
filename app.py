@@ -229,6 +229,7 @@ class Task:
         self.progress = 0
         self.total = 0
         self.current_item = None
+        self.faces_found = 0
         self.error = None
         self.created_at = datetime.now()
         self.started_at = None
@@ -240,11 +241,13 @@ class Task:
             self.status = 'running'
             self.started_at = datetime.now()
 
-    def update_progress(self, progress, total, current_item=None):
+    def update_progress(self, progress, total, current_item=None, faces_found=None):
         with self.lock:
             self.progress = progress
             self.total = total
             self.current_item = current_item
+            if faces_found is not None:
+                self.faces_found = faces_found
 
     def complete(self):
         with self.lock:
@@ -259,6 +262,14 @@ class Task:
 
     def to_dict(self):
         with self.lock:
+            # Calculate ETA if task is running
+            eta_seconds = None
+            if self.status == 'running' and self.started_at and self.progress > 0:
+                elapsed = (datetime.now() - self.started_at).total_seconds()
+                avg_time_per_item = elapsed / self.progress
+                remaining_items = self.total - self.progress
+                eta_seconds = int(avg_time_per_item * remaining_items)
+
             return {
                 'id': self.id,
                 'type': self.type,
@@ -267,6 +278,8 @@ class Task:
                 'total': self.total,
                 'progress_percent': int((self.progress / self.total * 100)) if self.total > 0 else 0,
                 'current_item': self.current_item,
+                'faces_found': self.faces_found,
+                'eta_seconds': eta_seconds,
                 'error': self.error,
                 'created_at': self.created_at.isoformat() if self.created_at else None,
                 'started_at': self.started_at.isoformat() if self.started_at else None,
@@ -421,7 +434,7 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
             photos = results.get('files', [])
 
             total_photos = len(photos)
-            task.update_progress(0, total_photos, None)
+            task.update_progress(0, total_photos, None, faces_found=0)
 
             logger.info(f"Task {task.id}: Found {total_photos} photos to process")
 
@@ -436,7 +449,7 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
                     photo_name = photo['name']
 
                     # Update task progress
-                    task.update_progress(indexed_photos, total_photos, photo_name)
+                    task.update_progress(indexed_photos, total_photos, photo_name, faces_found=total_faces)
                     logger.debug(f"Task {task.id}: Processing {photo_name}")
 
                     try:
