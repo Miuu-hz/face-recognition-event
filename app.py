@@ -407,6 +407,18 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
     try:
         task.start()
 
+        # Validate credentials have all necessary fields
+        required_fields = ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret']
+        missing_fields = [field for field in required_fields if field not in credentials_dict or not credentials_dict[field]]
+
+        if missing_fields:
+            error_msg = f"Missing required credential fields: {', '.join(missing_fields)}. Please re-authenticate."
+            logger.error(f"Task {task.id}: {error_msg}")
+            task.fail(error_msg)
+            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+            db_conn.commit()
+            return
+
         # Build Google Drive service
         creds = Credentials(**credentials_dict)
         drive_service = build('drive', 'v3', credentials=creds)
@@ -792,7 +804,12 @@ def login_temp():
     CLIENT_SECRETS_FILE = "client_secrets.json"
     SCOPES = ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/cloud-platform']
     flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, redirect_uri=url_for('callback_temp', _external=True))
-    authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
+    # Force consent prompt to always get refresh_token
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'  # Force re-consent to get refresh_token every time
+    )
     session['state'] = state
     return redirect(authorization_url)
 
@@ -804,7 +821,22 @@ def callback_temp():
     flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, state=state, redirect_uri=url_for('callback_temp', _external=True))
     flow.fetch_token(authorization_response=request.url)
     credentials = flow.credentials
-    session['credentials'] = {'token': credentials.token, 'refresh_token': credentials.refresh_token, 'token_uri': credentials.token_uri, 'client_id': credentials.client_id, 'client_secret': credentials.client_secret, 'scopes': credentials.scopes}
+
+    # Validate that we have all necessary credentials
+    if not credentials.refresh_token:
+        logger.error("No refresh_token received from Google OAuth")
+        return "Authentication error: No refresh token received. Please revoke app access in Google Account settings and try again.", 500
+
+    session['credentials'] = {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
+
+    logger.info("Successfully authenticated and stored credentials with refresh_token")
     # แก้ให้ redirect ไปที่หน้า dashboard หลักเสมอหลัง login
     return redirect(url_for('photographer_dashboard'))
 
