@@ -612,7 +612,19 @@ def start_indexing(event_id):
             raise ValidationError('Event not found')
 
         if 'credentials' not in session:
-            raise ValidationError('Not authenticated')
+            logger.warning("User not authenticated, redirecting to login")
+            return redirect(url_for('login_temp'))
+
+        # Validate credentials have refresh_token
+        credentials_dict = session['credentials']
+        required_fields = ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret']
+        missing_fields = [field for field in required_fields if field not in credentials_dict or not credentials_dict[field]]
+
+        if missing_fields:
+            logger.warning(f"Credentials missing fields: {missing_fields}. Forcing re-authentication.")
+            # Clear invalid credentials
+            session.pop('credentials', None)
+            return redirect(url_for('login_temp'))
 
         folder_id = event_data['drive_folder_id']
         if not folder_id:
@@ -630,9 +642,6 @@ def start_indexing(event_id):
             ('In Progress', task.id, event_id)
         )
         db.commit()
-
-        # Get credentials from session
-        credentials_dict = session['credentials']
 
         # Start background thread
         thread = threading.Thread(
