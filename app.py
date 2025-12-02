@@ -83,13 +83,29 @@ class DatabaseError(FaceRecognitionError):
     pass
 
 # --- Input Validation Functions ---
+def sanitize_html(text):
+    """Remove potentially dangerous HTML/script characters"""
+    import html
+    import re
+
+    # HTML escape to prevent XSS
+    text = html.escape(text)
+
+    # Remove any remaining suspicious patterns
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'javascript:', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'on\w+\s*=', '', text, flags=re.IGNORECASE)  # Remove onclick, onload, etc.
+
+    return text
+
 def validate_event_name(name):
-    """Validate event name"""
+    """Validate and sanitize event name"""
     if not name or not isinstance(name, str):
         raise ValidationError("Event name is required")
 
-    # Strip whitespace
+    # Strip whitespace and sanitize
     name = name.strip()
+    name = sanitize_html(name)
 
     if len(name) < 3:
         raise ValidationError("Event name must be at least 3 characters long")
@@ -97,9 +113,10 @@ def validate_event_name(name):
     if len(name) > 100:
         raise ValidationError("Event name must not exceed 100 characters")
 
-    # Check for basic alphanumeric and common punctuation
+    # Check for basic alphanumeric and common punctuation (after HTML escaping)
     import re
-    if not re.match(r'^[\w\s\-\(\)\[\].,!?]+$', name, re.UNICODE):
+    # Allow HTML entities like &amp; &lt; &gt; from sanitization
+    if not re.match(r'^[\w\s\-\(\)\[\].,!?&;#]+$', name, re.UNICODE):
         raise ValidationError("Event name contains invalid characters")
 
     return name
@@ -152,6 +169,37 @@ def validate_image_file(file):
         raise ValidationError(f"File size exceeds {max_size // (1024*1024)}MB limit")
 
     return True
+
+def check_drive_folder_access(drive_service, folder_id):
+    """Check if we have access to the Google Drive folder"""
+    try:
+        # Try to get folder metadata
+        folder = drive_service.files().get(
+            fileId=folder_id,
+            fields='id, name, mimeType, capabilities'
+        ).execute()
+
+        # Check if it's actually a folder
+        if folder.get('mimeType') != 'application/vnd.google-apps.folder':
+            raise ValidationError("The provided ID is not a folder")
+
+        # Check if we can read the folder
+        capabilities = folder.get('capabilities', {})
+        if not capabilities.get('canListChildren', False):
+            raise ValidationError("No permission to access this folder. Please check sharing settings.")
+
+        logger.info(f"Successfully verified access to folder: {folder.get('name')} (ID: {folder_id})")
+        return True
+
+    except HttpError as e:
+        if e.resp.status == 404:
+            raise ValidationError("Folder not found. Please check the folder ID or link.")
+        elif e.resp.status == 403:
+            raise ValidationError("Access denied. Please share the folder with your Google account.")
+        else:
+            raise GoogleDriveError(f"Failed to access folder: {e}")
+    except Exception as e:
+        raise GoogleDriveError(f"Error checking folder access: {e}")
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your_super_secret_key_change_this')
@@ -679,28 +727,102 @@ def delete_event(event_id):
 
 @app.route('/set_folder/<event_id>/<folder_id>')
 def set_folder(event_id, folder_id):
-    db = get_db()
-    db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
-    db.commit()
-    print(f"Set folder {folder_id} for event {event_id}")
-    return redirect(url_for('photographer_dashboard'))
+    try:
+        # Validate event ID
+        event_id = validate_event_id(event_id)
+
+        # Validate folder ID
+        folder_id = validate_folder_id(folder_id)
+
+        # Check if user is authenticated
+        if 'credentials' not in session:
+            logger.warning("User not authenticated when setting folder")
+            return redirect(url_for('login_temp'))
+
+        # Build Drive service and check folder access
+        creds = Credentials(**session['credentials'])
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Verify we can access the folder
+        check_drive_folder_access(drive_service, folder_id)
+
+        # If all validations pass, save folder ID
+        db = get_db()
+        db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
+        db.commit()
+
+        logger.info(f"Set folder {folder_id} for event {event_id}")
+        return redirect(url_for('photographer_dashboard'))
+
+    except ValidationError as e:
+        logger.warning(f"Validation error in set_folder: {e}")
+        return f"❌ Error: {str(e)}", 400
+    except GoogleDriveError as e:
+        logger.error(f"Google Drive error in set_folder: {e}")
+        return f"❌ Google Drive Error: {str(e)}", 500
+    except Exception as e:
+        logger.error(f"Unexpected error in set_folder: {e}", exc_info=True)
+        return "❌ An unexpected error occurred. Please try again.", 500
 
 @app.route('/set_folder_from_link/<event_id>', methods=['POST'])
 def set_folder_from_link(event_id):
-    link = request.form['folder_link']
     try:
-        if '/folders/' in link: folder_id = link.split('/folders/')[-1]
-        else: folder_id = link.split('/')[-1]
-        if '?' in folder_id: folder_id = folder_id.split('?')[0]
-        if '#' in folder_id: folder_id = folder_id.split('#')[0]
-    except (IndexError, AttributeError):
-        return "Invalid Google Drive Folder URL format.", 400
-    
-    db = get_db()
-    db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
-    db.commit()
-    print(f"Set folder {folder_id} for event {event_id} via link")
-    return redirect(url_for('photographer_dashboard'))
+        # Validate event ID
+        event_id = validate_event_id(event_id)
+
+        # Get and validate folder link
+        link = request.form.get('folder_link', '').strip()
+        if not link:
+            raise ValidationError("Folder link is required")
+
+        # Extract folder ID from link
+        try:
+            if '/folders/' in link:
+                folder_id = link.split('/folders/')[-1]
+            else:
+                folder_id = link.split('/')[-1]
+
+            # Clean up query parameters and fragments
+            if '?' in folder_id:
+                folder_id = folder_id.split('?')[0]
+            if '#' in folder_id:
+                folder_id = folder_id.split('#')[0]
+
+            # Validate extracted folder ID
+            folder_id = validate_folder_id(folder_id)
+
+        except (IndexError, AttributeError, ValidationError):
+            raise ValidationError("Invalid Google Drive folder URL format. Please use a valid folder link.")
+
+        # Check if user is authenticated
+        if 'credentials' not in session:
+            logger.warning("User not authenticated when setting folder from link")
+            return redirect(url_for('login_temp'))
+
+        # Build Drive service and check folder access
+        creds = Credentials(**session['credentials'])
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Verify we can access the folder
+        check_drive_folder_access(drive_service, folder_id)
+
+        # If all validations pass, save folder ID
+        db = get_db()
+        db.execute('UPDATE events SET drive_folder_id = ? WHERE id = ?', (folder_id, event_id))
+        db.commit()
+
+        logger.info(f"Set folder {folder_id} for event {event_id} via link")
+        return redirect(url_for('photographer_dashboard'))
+
+    except ValidationError as e:
+        logger.warning(f"Validation error in set_folder_from_link: {e}")
+        return f"❌ Error: {str(e)}", 400
+    except GoogleDriveError as e:
+        logger.error(f"Google Drive error in set_folder_from_link: {e}")
+        return f"❌ Google Drive Error: {str(e)}", 500
+    except Exception as e:
+        logger.error(f"Unexpected error in set_folder_from_link: {e}", exc_info=True)
+        return "❌ An unexpected error occurred. Please try again.", 500
     
 # --- API Endpoints and Auth Routes (เหมือนเดิม) ---
 @app.route('/api/check_auth')
