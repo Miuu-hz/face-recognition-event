@@ -943,6 +943,11 @@ def event_page(event_id):
     # ส่ง event_id ไปให้ template ด้วย
     return render_template('event_page.html', event_name=event_data['name'], event_id=event_id)
 
+@app.route('/login')
+def login():
+    """Photographer login page"""
+    return render_template('login.html')
+
 @app.route('/login_temp')
 def login_temp():
     CLIENT_SECRETS_FILE = "client_secrets.json"
