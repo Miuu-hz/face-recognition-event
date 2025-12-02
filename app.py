@@ -606,7 +606,20 @@ def init_db_command():
 
 @app.route('/')
 def index():
-    return redirect(url_for('photographer_dashboard'))
+    """Landing page for public users"""
+    return render_template('index.html')
+
+@app.route('/events')
+def events_list():
+    """List all completed events for public users"""
+    db = get_db()
+    # Only show completed events to public
+    events_from_db = db.execute(
+        "SELECT * FROM events WHERE indexing_status = 'Completed' ORDER BY created_at DESC"
+    ).fetchall()
+
+    events = [dict(event) for event in events_from_db]
+    return render_template('events.html', events=events)
 
 @app.route('/dashboard/photographer')
 def photographer_dashboard():
