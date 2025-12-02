@@ -1127,6 +1127,19 @@ def search_faces(event_id):
         logger.error(f"Error in search_faces: {e}", exc_info=True)
         return "Failed to search faces", 500
 
+# Error Handlers
+@app.errorhandler(404)
+def page_not_found(e):
+    """Handle 404 errors with custom page"""
+    logger.warning(f"404 error: {request.url}")
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    """Handle 500 errors with custom page"""
+    logger.error(f"500 error: {str(e)}", exc_info=True)
+    return render_template('500.html'), 500
+
 if __name__ == '__main__':
     print_config()
     host = os.getenv('HOST', '0.0.0.0')
