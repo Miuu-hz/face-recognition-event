@@ -263,6 +263,91 @@
             gap: 0.3rem;
         }
 
+        /* Toast Notification Styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            min-width: 300px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            font-weight: 500;
+        }
+
+        .toast.success {
+            background: #D1F2EB;
+            color: #0C5460;
+            border-left: 4px solid #28a745;
+        }
+
+        .toast.error {
+            background: #F8D7DA;
+            color: #721C24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .toast.info {
+            background: #D1ECF1;
+            color: #0C5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .toast.warning {
+            background: #FFF3CD;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+        }
+
+        .toast-close {
+            margin-left: auto;
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
         .no-events {
             text-align: center;
             padding: 3rem;
@@ -424,17 +509,21 @@
     </style>
 </head>
 <body>
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <h1>📸 Photographer Dashboard</h1>
         
         <div class="section">
             <h2>✨ Create New Event</h2>
-            <form action="/create_event" method="post" class="create-form">
+            <form action="/create_event" method="post" class="create-form" id="createEventForm" onsubmit="return validateEventForm(event)">
                 <div class="form-group">
                     <label for="event_name">Event Name</label>
-                    <input type="text" id="event_name" name="event_name" placeholder="Enter your event name..." required>
+                    <input type="text" id="event_name" name="event_name" placeholder="Enter your event name..." required minlength="3" maxlength="100">
+                    <small class="error-message" id="event_name_error" style="color: #dc3545; display: none; margin-top: 5px;"></small>
                 </div>
-                <button type="submit" class="btn btn-primary">Create Event</button>
+                <button type="submit" class="btn btn-primary" id="createEventBtn">Create Event</button>
             </form>
         </div>
 
@@ -509,9 +598,12 @@
                 
                 <div class="paste-section">
                     <h4 style="color: var(--primary-brown); margin-bottom: 1rem;">🔗 Or paste a Google Drive folder link:</h4>
-                    <form id="pasteForm" class="paste-form">
-                        <input type="url" id="folderLink" placeholder="https://drive.google.com/drive/folders/..." required>
-                        <button type="submit" class="btn btn-secondary">Use Link</button>
+                    <form id="pasteForm" class="paste-form" onsubmit="return validateFolderLink(event)">
+                        <div style="flex: 1;">
+                            <input type="url" id="folderLink" placeholder="https://drive.google.com/drive/folders/..." required>
+                            <small class="error-message" id="folder_link_error" style="color: #dc3545; display: none; margin-top: 5px;"></small>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" id="useLinkBtn">Use Link</button>
                     </form>
                 </div>
             </div>
@@ -520,7 +612,125 @@
 
     <script>
         let currentEventId = '';
-        
+
+        // Client-side Form Validation
+        function validateEventForm(event) {
+            const eventNameInput = document.getElementById('event_name');
+            const eventNameError = document.getElementById('event_name_error');
+            const eventName = eventNameInput.value.trim();
+
+            // Clear previous error
+            eventNameError.style.display = 'none';
+            eventNameInput.style.borderColor = '';
+
+            // Validate length
+            if (eventName.length < 3) {
+                showValidationError(eventNameInput, eventNameError, 'Event name must be at least 3 characters long');
+                event.preventDefault();
+                return false;
+            }
+
+            if (eventName.length > 100) {
+                showValidationError(eventNameInput, eventNameError, 'Event name must not exceed 100 characters');
+                event.preventDefault();
+                return false;
+            }
+
+            // Validate characters (allow alphanumeric, spaces, and common punctuation)
+            const validPattern = /^[\w\s\-\(\)\[\].,!?]+$/;
+            if (!validPattern.test(eventName)) {
+                showValidationError(eventNameInput, eventNameError, 'Event name contains invalid characters. Only letters, numbers, spaces, and basic punctuation allowed.');
+                event.preventDefault();
+                return false;
+            }
+
+            // Show loading state
+            setButtonLoading('createEventBtn', true, 'Creating...');
+            return true;
+        }
+
+        function validateFolderLink(event) {
+            const folderLinkInput = document.getElementById('folderLink');
+            const folderLinkError = document.getElementById('folder_link_error');
+            const folderLink = folderLinkInput.value.trim();
+
+            // Clear previous error
+            folderLinkError.style.display = 'none';
+            folderLinkInput.style.borderColor = '';
+
+            // Validate Google Drive URL format
+            const driveUrlPattern = /drive\.google\.com\/drive\/folders\//;
+            if (!driveUrlPattern.test(folderLink)) {
+                showValidationError(folderLinkInput, folderLinkError, 'Invalid Google Drive folder link. Please use a valid folder URL.');
+                event.preventDefault();
+                return false;
+            }
+
+            // Show loading state
+            setButtonLoading('useLinkBtn', true, 'Verifying...');
+            return true;
+        }
+
+        function showValidationError(input, errorElement, message) {
+            input.style.borderColor = '#dc3545';
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            showToast(message, 'error');
+        }
+
+        function setButtonLoading(buttonId, loading, loadingText = 'Loading...') {
+            const button = document.getElementById(buttonId);
+            if (!button) return;
+
+            if (loading) {
+                button.disabled = true;
+                button.dataset.originalText = button.textContent;
+                button.innerHTML = `<span class="loading"></span> ${loadingText}`;
+            } else {
+                button.disabled = false;
+                button.textContent = button.dataset.originalText || button.textContent;
+            }
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || icons.info}</span>
+                <span class="toast-message">${message}</span>
+                <span class="toast-close" onclick="closeToast(this)">✕</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto remove after duration
+            setTimeout(() => {
+                removeToast(toast);
+            }, duration);
+        }
+
+        function closeToast(closeBtn) {
+            const toast = closeBtn.parentElement;
+            removeToast(toast);
+        }
+
+        function removeToast(toast) {
+            toast.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }
+
         // Modal functionality
         const modal = document.getElementById('folderModal');
         const closeBtn = document.getElementsByClassName('close')[0];
@@ -680,10 +890,14 @@
                     </div>
                 `;
             } else if (task.status === 'completed') {
+                // Show success toast
+                showToast(`Indexing completed! Found ${task.faces_found || 0} faces in ${task.total} photos.`, 'success');
                 // Reload page to show updated status
-                location.reload();
+                setTimeout(() => location.reload(), 1000);
             } else if (task.status === 'failed') {
-                // Show error
+                // Show error toast
+                showToast(`Indexing failed: ${task.error || 'Unknown error'}`, 'error', 8000);
+                // Show error in status div
                 statusDiv.className = 'status';
                 statusDiv.style.backgroundColor = '#f8d7da';
                 statusDiv.style.color = '#721c24';
