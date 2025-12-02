@@ -984,6 +984,13 @@ def callback_temp():
     # แก้ให้ redirect ไปที่หน้า dashboard หลักเสมอหลัง login
     return redirect(url_for('photographer_dashboard'))
 
+@app.route('/logout')
+def logout():
+    """Logout route - clears session and redirects to landing page"""
+    session.clear()
+    logger.info("User logged out successfully")
+    return redirect(url_for('index'))
+
 @app.route('/search_faces/<event_id>', methods=['POST'])
 def search_faces(event_id):
     try:
