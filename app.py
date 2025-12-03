@@ -268,19 +268,70 @@ def print_config():
     print("="*50 + "\n")
 
 # --- Checkpoint Management Functions ---
+def ensure_checkpoint_table(db_conn):
+    """Ensure indexing_checkpoints table exists, create if missing (auto-migration)"""
+    try:
+        # Check if table exists
+        cursor = db_conn.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='indexing_checkpoints'
+        """)
+
+        if not cursor.fetchone():
+            logger.info("Creating indexing_checkpoints table (auto-migration)...")
+            # Create the table
+            db_conn.execute("""
+                CREATE TABLE indexing_checkpoints (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_id TEXT NOT NULL,
+                    photo_id TEXT NOT NULL,
+                    photo_name TEXT NOT NULL,
+                    faces_found INTEGER DEFAULT 0,
+                    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+                )
+            """)
+
+            # Create indexes
+            db_conn.execute("""
+                CREATE INDEX idx_checkpoints_event ON indexing_checkpoints(event_id)
+            """)
+
+            db_conn.execute("""
+                CREATE INDEX idx_checkpoints_photo ON indexing_checkpoints(event_id, photo_id)
+            """)
+
+            db_conn.commit()
+            logger.info("✅ Successfully created indexing_checkpoints table - Resume feature is now available!")
+            return True
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error ensuring checkpoint table: {e}")
+        return False
+
 def get_checkpoints(db_conn, event_id):
     """Get all processed photo IDs from checkpoints for an event"""
-    cursor = db_conn.execute(
-        'SELECT photo_id, photo_name, faces_found FROM indexing_checkpoints WHERE event_id = ?',
-        (event_id,)
-    )
-    checkpoints = cursor.fetchall()
-    processed_ids = {row['photo_id']: {'name': row['photo_name'], 'faces': row['faces_found']} for row in checkpoints}
-    return processed_ids
+    try:
+        if not ensure_checkpoint_table(db_conn):
+            return {}
+
+        cursor = db_conn.execute(
+            'SELECT photo_id, photo_name, faces_found FROM indexing_checkpoints WHERE event_id = ?',
+            (event_id,)
+        )
+        checkpoints = cursor.fetchall()
+        processed_ids = {row['photo_id']: {'name': row['photo_name'], 'faces': row['faces_found']} for row in checkpoints}
+        return processed_ids
+    except Exception as e:
+        logger.warning(f"Error getting checkpoints: {e}. Continuing without resume functionality.")
+        return {}
 
 def save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_found):
     """Save a checkpoint after processing a photo"""
     try:
+        if not ensure_checkpoint_table(db_conn):
+            return
+
         db_conn.execute(
             'INSERT INTO indexing_checkpoints (event_id, photo_id, photo_name, faces_found) VALUES (?, ?, ?, ?)',
             (event_id, photo_id, photo_name, faces_found)
@@ -292,6 +343,9 @@ def save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_found):
 def clear_checkpoints(db_conn, event_id):
     """Clear all checkpoints for an event (called on completion)"""
     try:
+        if not ensure_checkpoint_table(db_conn):
+            return
+
         db_conn.execute('DELETE FROM indexing_checkpoints WHERE event_id = ?', (event_id,))
         db_conn.commit()
         logger.info(f"Cleared checkpoints for event {event_id}")
@@ -300,11 +354,18 @@ def clear_checkpoints(db_conn, event_id):
 
 def count_checkpoints(db_conn, event_id):
     """Count number of checkpoints for an event"""
-    cursor = db_conn.execute(
-        'SELECT COUNT(*) as count FROM indexing_checkpoints WHERE event_id = ?',
-        (event_id,)
-    )
-    return cursor.fetchone()['count']
+    try:
+        if not ensure_checkpoint_table(db_conn):
+            return 0
+
+        cursor = db_conn.execute(
+            'SELECT COUNT(*) as count FROM indexing_checkpoints WHERE event_id = ?',
+            (event_id,)
+        )
+        return cursor.fetchone()['count']
+    except Exception as e:
+        logger.warning(f"Error counting checkpoints: {e}")
+        return 0
 
 # --- Background Task Management ---
 class Task:
