@@ -213,32 +213,41 @@ DATABASE = os.getenv('DATABASE_PATH', 'database.db')
 def detect_gpu():
     """Detect if GPU is available for face recognition
 
-    Returns True if:
-    1. dlib was compiled with CUDA support, OR
-    2. nvidia-smi detects GPU (as fallback check)
+    Returns True ONLY if dlib was compiled with CUDA support.
+    Having an NVIDIA GPU is not enough - dlib must be compiled with CUDA!
+
+    Note: nvidia-smi showing GPU does NOT mean dlib can use it.
     """
-    # Method 1: Check if dlib has CUDA support (most accurate)
     try:
         import dlib
         if hasattr(dlib, 'DLIB_USE_CUDA') and dlib.DLIB_USE_CUDA:
+            logger.info("GPU (CUDA) detected: dlib compiled with CUDA support")
             return True
-    except:
-        pass
+        else:
+            # Check if NVIDIA GPU exists but dlib doesn't have CUDA
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ['nvidia-smi'],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                if result.returncode == 0:
+                    logger.warning("⚠️  NVIDIA GPU detected but dlib is NOT compiled with CUDA!")
+                    logger.warning("    Face recognition will use CPU (slower than optimal)")
+                    logger.warning("    To use GPU: recompile dlib with CUDA, or set FACE_MODEL=hog in .env")
+            except:
+                pass
 
-    # Method 2: Check nvidia-smi as fallback
-    try:
-        import subprocess
-        result = subprocess.run(
-            ['nvidia-smi'],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
-        return result.returncode == 0
-    except:
-        pass
-
-    return False
+            logger.info("GPU not available: using CPU")
+            return False
+    except ImportError:
+        logger.warning("dlib not installed")
+        return False
+    except Exception as e:
+        logger.error(f"Error detecting GPU: {e}")
+        return False
 
 has_gpu = detect_gpu()
 
