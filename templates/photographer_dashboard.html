@@ -762,10 +762,31 @@
                                         <div class="status in-progress" id="status-{{ event.id }}" data-event-id="{{ event.id }}">
                                             <span class="loading"></span>⏳ Indexing in progress...
                                         </div>
+                                        <!-- Show reset button if stuck (will be shown by JS) -->
+                                        <div id="stuck-indicator-{{ event.id }}" style="display: none; margin-top: 1rem;">
+                                            <div style="background: rgba(251, 191, 36, 0.2); border: 1px solid var(--warning); border-radius: 0.5rem; padding: 0.75rem; color: var(--warning); margin-bottom: 0.75rem;">
+                                                <strong>⚠️ Task Not Responding</strong>
+                                                <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
+                                                    The indexing task appears to be stuck or was interrupted. Click below to reset and restart.
+                                                </p>
+                                            </div>
+                                            <form action="{{ url_for('reset_event', event_id=event.id) }}" method="post" style="display: inline;">
+                                                <button type="submit" class="btn btn-secondary">
+                                                    🔄 Reset & Restart
+                                                </button>
+                                            </form>
+                                        </div>
                                     {% elif event.indexing_status == 'Completed' %}
                                         <div class="status completed">✅ Indexing Complete!</div>
                                     {% elif event.indexing_status == 'Failed' %}
-                                        <div class="status" style="background-color: #f8d7da; color: #721c24;">⚠️ Indexing Failed</div>
+                                        <div class="status" style="background: rgba(239, 68, 68, 0.2); color: var(--error); border: 1px solid var(--error); margin-bottom: 1rem;">
+                                            ⚠️ Indexing Failed
+                                        </div>
+                                        <!-- Show restart button with checkpoint detection -->
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary" id="restart-btn-{{ event.id }}">
+                                            <span id="restart-icon-{{ event.id }}">🔄</span>
+                                            <span id="restart-text-{{ event.id }}">Restart Indexing</span>
+                                        </a>
                                     {% endif %}
 
                                 {% else %}
@@ -1170,12 +1191,42 @@
             }
         }
 
+        // Check if event is stuck (In Progress but no active task)
+        async function checkIfStuck(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/checkpoint/status`);
+                const data = await response.json();
+
+                if (data.is_stuck) {
+                    // Show stuck indicator and reset button
+                    const stuckIndicator = document.getElementById(`stuck-indicator-${eventId}`);
+                    const statusDiv = document.getElementById(`status-${eventId}`);
+
+                    if (stuckIndicator) {
+                        stuckIndicator.style.display = 'block';
+                    }
+
+                    // Hide loading spinner
+                    if (statusDiv) {
+                        statusDiv.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking if stuck:', error);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Check for in-progress tasks
             const statusDivs = document.querySelectorAll('.status.in-progress[data-event-id]');
             statusDivs.forEach(div => {
                 const eventId = div.getAttribute('data-event-id');
+
+                // Try to connect to SSE stream
                 connectTaskStream(eventId);
+
+                // Also check if stuck after 2 seconds
+                setTimeout(() => checkIfStuck(eventId), 2000);
             });
 
             // Check checkpoint status for events with "Not Started" status
@@ -1184,7 +1235,35 @@
                 const eventId = button.id.replace('start-btn-', '');
                 checkCheckpointStatus(eventId);
             });
+
+            // Check checkpoint status for events with "Failed" status (for Resume)
+            const restartButtons = document.querySelectorAll('[id^="restart-btn-"]');
+            restartButtons.forEach(button => {
+                const eventId = button.id.replace('restart-btn-', '');
+                checkCheckpointForRestart(eventId);
+            });
         });
+
+        // Check checkpoint for restart button (Failed status)
+        async function checkCheckpointForRestart(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/checkpoint/status`);
+                const data = await response.json();
+
+                if (data.has_checkpoints && data.checkpoint_count > 0) {
+                    // Update button to show Resume instead of Restart
+                    const restartIcon = document.getElementById(`restart-icon-${eventId}`);
+                    const restartText = document.getElementById(`restart-text-${eventId}`);
+
+                    if (restartIcon && restartText) {
+                        restartIcon.textContent = '▶️';
+                        restartText.textContent = `Resume Indexing (${data.checkpoint_count} photos done)`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking checkpoint for restart:', error);
+            }
+        }
     </script>
 </body>
 </html>

@@ -801,6 +801,17 @@ def start_indexing(event_id):
         if not event_data:
             raise ValidationError('Event not found')
 
+        # Reset status if stuck (In Progress but no active task)
+        if event_data['indexing_status'] == 'In Progress':
+            task_id = event_data['task_id']
+            if task_id:
+                task = get_task(task_id)
+                if not task or task.status in ['completed', 'failed']:
+                    # Task is dead, reset to Failed so we can restart
+                    logger.info(f"Resetting stuck event {event_id} from 'In Progress' to 'Failed'")
+                    db.execute("UPDATE events SET indexing_status = 'Failed' WHERE id = ?", (event_id,))
+                    db.commit()
+
         if 'credentials' not in session:
             logger.warning("User not authenticated, redirecting to login")
             return redirect(url_for('login_temp'))
@@ -1069,19 +1080,49 @@ def get_checkpoint_status(event_id):
     db = get_db()
     try:
         checkpoint_count = count_checkpoints(db, event_id)
-        event_data = db.execute('SELECT indexing_status FROM events WHERE id = ?', (event_id,)).fetchone()
+        event_data = db.execute('SELECT indexing_status, task_id FROM events WHERE id = ?', (event_id,)).fetchone()
 
         if not event_data:
             return jsonify({'error': 'Event not found'}), 404
+
+        # Check if event is stuck (In Progress but no active task)
+        is_stuck = False
+        if event_data['indexing_status'] == 'In Progress' and event_data['task_id']:
+            task = get_task(event_data['task_id'])
+            if not task or task.status in ['completed', 'failed']:
+                is_stuck = True
 
         return jsonify({
             'has_checkpoints': checkpoint_count > 0,
             'checkpoint_count': checkpoint_count,
             'indexing_status': event_data['indexing_status'],
+            'is_stuck': is_stuck,
             'can_resume': checkpoint_count > 0 and event_data['indexing_status'] in ['Not Started', 'Failed']
         })
     except Exception as e:
         logger.error(f"Error getting checkpoint status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/reset_event/<event_id>', methods=['POST'])
+def reset_event(event_id):
+    """Reset a stuck event back to Failed status"""
+    try:
+        event_id = validate_event_id(event_id)
+        db = get_db()
+
+        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Reset to Failed so user can restart/resume
+        db.execute("UPDATE events SET indexing_status = 'Failed' WHERE id = ?", (event_id,))
+        db.commit()
+
+        logger.info(f"Manually reset event {event_id} to Failed status")
+        return redirect(url_for('photographer_dashboard'))
+
+    except Exception as e:
+        logger.error(f"Error resetting event: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/event/<event_id>')
