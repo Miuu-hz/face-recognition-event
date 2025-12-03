@@ -291,23 +291,33 @@ Professional onboarding experience
 Error handlers in Flask app
 User-friendly error messages
 Responsive error page designs
-📋 Planned (Phase 3 - MEDIUM PRIORITY)
- 🐘 PostgreSQL Support
+📋 Phase 3 - MEDIUM PRIORITY
+✅ 🔄 Resume Interrupted Indexing (COMPLETED)
+   - ✅ Save progress checkpoints during indexing
+   - ✅ Resume from last checkpoint on failure/interruption
+   - ✅ Skip already processed photos
+   - ✅ Progress persistence in database
+   - ✅ UI indicator showing resumable progress
+   - ✅ Automatic checkpoint cleanup on completion
+   Implementation:
+   * New table: indexing_checkpoints (event_id, photo_id, photo_name, faces_found, processed_at)
+   * Helper functions: get_checkpoints(), save_checkpoint(), clear_checkpoints(), count_checkpoints()
+   * Modified run_indexing_background() to check/save/skip checkpoints
+   * API endpoint: /api/event/<event_id>/checkpoint/status
+   * Dashboard shows "Resume Face Indexing" with checkpoint count when interrupted
+   * Migration script: migrate_checkpoints.py
+
+ 🐘 PostgreSQL Support (TODO)
    - Replace SQLite with PostgreSQL for better concurrency
    - Connection pooling
    - Migration script from SQLite to PostgreSQL
    - Environment-based database selection
- ⚡ Performance Optimization
+ ⚡ Performance Optimization (TODO)
    - Cache face encodings to avoid recomputation
    - Redis/Memcached integration for encoding cache
    - Implement lazy loading for event images
    - Optimize database queries with indexes
- 🔄 Resume Interrupted Indexing
-   - Save progress checkpoints during indexing
-   - Resume from last checkpoint on failure/interruption
-   - Skip already processed photos
-   - Progress persistence in database
- 📸 Batch Upload Improvements
+ 📸 Batch Upload Improvements (TODO)
    - Drag & drop multiple files
    - Image preview before upload
    - Client-side image validation

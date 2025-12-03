@@ -742,8 +742,22 @@
                                 {% if event.drive_folder_id %}
                                     <p><strong>📁 Linked Folder:</strong> {{ event.drive_folder_id[:20] }}...</p>
 
+                                    <!-- Checkpoint resume indicator -->
+                                    <div id="checkpoint-indicator-{{ event.id }}" class="checkpoint-info" style="display: none; margin-bottom: 1rem;">
+                                        <div style="background: rgba(251, 191, 36, 0.2); border: 1px solid var(--warning); border-radius: 0.5rem; padding: 0.75rem; color: var(--warning);">
+                                            <strong>⏸️ Interrupted Progress Detected</strong>
+                                            <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
+                                                <span id="checkpoint-count-{{ event.id }}"></span> photos already processed.
+                                                Click below to resume from where you left off.
+                                            </p>
+                                        </div>
+                                    </div>
+
                                     {% if event.indexing_status == 'Not Started' %}
-                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">🚀 Start Face Indexing</a>
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary" id="start-btn-{{ event.id }}">
+                                            <span id="start-icon-{{ event.id }}">🚀</span>
+                                            <span id="start-text-{{ event.id }}">Start Face Indexing</span>
+                                        </a>
                                     {% elif event.indexing_status == 'In Progress' %}
                                         <div class="status in-progress" id="status-{{ event.id }}" data-event-id="{{ event.id }}">
                                             <span class="loading"></span>⏳ Indexing in progress...
@@ -1126,11 +1140,49 @@
         }
 
         // Start SSE streams for all events with "In Progress" status
+        // Check checkpoint status for resume functionality
+        async function checkCheckpointStatus(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/checkpoint/status`);
+                const data = await response.json();
+
+                if (data.can_resume) {
+                    // Show checkpoint indicator
+                    const indicator = document.getElementById(`checkpoint-indicator-${eventId}`);
+                    const countSpan = document.getElementById(`checkpoint-count-${eventId}`);
+
+                    if (indicator && countSpan) {
+                        indicator.style.display = 'block';
+                        countSpan.textContent = data.checkpoint_count;
+
+                        // Update button text to "Resume"
+                        const startIcon = document.getElementById(`start-icon-${eventId}`);
+                        const startText = document.getElementById(`start-text-${eventId}`);
+
+                        if (startIcon && startText) {
+                            startIcon.textContent = '▶️';
+                            startText.textContent = 'Resume Face Indexing';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking checkpoint status:', error);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Check for in-progress tasks
             const statusDivs = document.querySelectorAll('.status.in-progress[data-event-id]');
             statusDivs.forEach(div => {
                 const eventId = div.getAttribute('data-event-id');
                 connectTaskStream(eventId);
+            });
+
+            // Check checkpoint status for events with "Not Started" status
+            const startButtons = document.querySelectorAll('[id^="start-btn-"]');
+            startButtons.forEach(button => {
+                const eventId = button.id.replace('start-btn-', '');
+                checkCheckpointStatus(eventId);
             });
         });
     </script>

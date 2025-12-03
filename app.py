@@ -267,6 +267,45 @@ def print_config():
     print(f"Num Jitters:  {FACE_RECOGNITION_CONFIG['num_jitters']}")
     print("="*50 + "\n")
 
+# --- Checkpoint Management Functions ---
+def get_checkpoints(db_conn, event_id):
+    """Get all processed photo IDs from checkpoints for an event"""
+    cursor = db_conn.execute(
+        'SELECT photo_id, photo_name, faces_found FROM indexing_checkpoints WHERE event_id = ?',
+        (event_id,)
+    )
+    checkpoints = cursor.fetchall()
+    processed_ids = {row['photo_id']: {'name': row['photo_name'], 'faces': row['faces_found']} for row in checkpoints}
+    return processed_ids
+
+def save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_found):
+    """Save a checkpoint after processing a photo"""
+    try:
+        db_conn.execute(
+            'INSERT INTO indexing_checkpoints (event_id, photo_id, photo_name, faces_found) VALUES (?, ?, ?, ?)',
+            (event_id, photo_id, photo_name, faces_found)
+        )
+        db_conn.commit()
+    except Exception as e:
+        logger.warning(f"Failed to save checkpoint for {photo_name}: {e}")
+
+def clear_checkpoints(db_conn, event_id):
+    """Clear all checkpoints for an event (called on completion)"""
+    try:
+        db_conn.execute('DELETE FROM indexing_checkpoints WHERE event_id = ?', (event_id,))
+        db_conn.commit()
+        logger.info(f"Cleared checkpoints for event {event_id}")
+    except Exception as e:
+        logger.warning(f"Failed to clear checkpoints: {e}")
+
+def count_checkpoints(db_conn, event_id):
+    """Count number of checkpoints for an event"""
+    cursor = db_conn.execute(
+        'SELECT COUNT(*) as count FROM indexing_checkpoints WHERE event_id = ?',
+        (event_id,)
+    )
+    return cursor.fetchone()['count']
+
 # --- Background Task Management ---
 class Task:
     """Represents a background task with progress tracking"""
@@ -484,6 +523,19 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
         temp_files = []  # Track temp files for cleanup
 
         try:
+            # Check for existing checkpoints (resume functionality)
+            processed_photos = get_checkpoints(db_conn, event_id)
+            resuming = len(processed_photos) > 0
+
+            if resuming:
+                # Resume from previous progress
+                logger.info(f"Task {task.id}: Resuming from checkpoint - {len(processed_photos)} photos already processed")
+                # Count faces from checkpoints
+                total_faces = sum(p['faces'] for p in processed_photos.values())
+                indexed_photos = len(processed_photos)
+            else:
+                logger.info(f"Task {task.id}: Starting fresh indexing (no checkpoints found)")
+
             # Get all images from the folder
             query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
             results = drive_service.files().list(
@@ -494,9 +546,12 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
             photos = results.get('files', [])
 
             total_photos = len(photos)
-            task.update_progress(0, total_photos, None, faces_found=0)
+            task.update_progress(indexed_photos, total_photos, None, faces_found=total_faces)
 
-            logger.info(f"Task {task.id}: Found {total_photos} photos to process")
+            if resuming:
+                logger.info(f"Task {task.id}: Found {total_photos} total photos ({len(processed_photos)} already done, {total_photos - len(processed_photos)} remaining)")
+            else:
+                logger.info(f"Task {task.id}: Found {total_photos} photos to process")
 
             # Process photos in batches
             batch_size = FACE_RECOGNITION_CONFIG['batch_size']
@@ -508,10 +563,16 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
                     photo_id = photo['id']
                     photo_name = photo['name']
 
+                    # Skip if already processed (resume functionality)
+                    if photo_id in processed_photos:
+                        logger.debug(f"Task {task.id}: Skipping {photo_name} (already processed)")
+                        continue
+
                     # Update task progress
                     task.update_progress(indexed_photos, total_photos, photo_name, faces_found=total_faces)
                     logger.debug(f"Task {task.id}: Processing {photo_name}")
 
+                    faces_in_this_photo = 0
                     try:
                         # Download image to temp file
                         temp_path = download_image_temp(drive_service, photo_id)
@@ -542,6 +603,7 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
                                     (event_id, photo_id, photo_name, encoding_blob, location_json)
                                 )
                                 total_faces += 1
+                                faces_in_this_photo += 1
                         else:
                             logger.debug(f"Task {task.id}: No faces found in {photo_name}")
 
@@ -550,6 +612,9 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
                         # Continue with next photo
 
                     indexed_photos += 1
+
+                    # Save checkpoint for resume functionality
+                    save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_in_this_photo)
 
                     # Update database progress
                     db_conn.execute(
@@ -565,8 +630,11 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
             )
             db_conn.commit()
 
+            # Clear checkpoints on successful completion
+            clear_checkpoints(db_conn, event_id)
+
             task.complete()
-            logger.info(f"Task {task.id}: Indexing completed. Photos: {indexed_photos}, Faces: {total_faces}")
+            logger.info(f"Task {task.id}: Indexing completed successfully. Photos: {indexed_photos}, Faces: {total_faces}")
 
         except HttpError as error:
             error_msg = f'Google Drive API error: {error}'
@@ -933,6 +1001,27 @@ def stream_event_task(event_id):
             'X-Accel-Buffering': 'no'
         }
     )
+
+@app.route('/api/event/<event_id>/checkpoint/status')
+def get_checkpoint_status(event_id):
+    """Get checkpoint status for an event (for resume indicator)"""
+    db = get_db()
+    try:
+        checkpoint_count = count_checkpoints(db, event_id)
+        event_data = db.execute('SELECT indexing_status FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        return jsonify({
+            'has_checkpoints': checkpoint_count > 0,
+            'checkpoint_count': checkpoint_count,
+            'indexing_status': event_data['indexing_status'],
+            'can_resume': checkpoint_count > 0 and event_data['indexing_status'] in ['Not Started', 'Failed']
+        })
+    except Exception as e:
+        logger.error(f"Error getting checkpoint status: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/event/<event_id>')
 def event_page(event_id):
