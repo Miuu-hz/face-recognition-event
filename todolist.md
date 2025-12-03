@@ -291,14 +291,74 @@ Professional onboarding experience
 Error handlers in Flask app
 User-friendly error messages
 Responsive error page designs
-📋 Planned (Phase 3 - MEDIUM)
- PostgreSQL support
- Performance optimization (caching encodings)
- Resume interrupted indexing
- Batch photo upload improvements
+📋 Planned (Phase 3 - MEDIUM PRIORITY)
+ 🐘 PostgreSQL Support
+   - Replace SQLite with PostgreSQL for better concurrency
+   - Connection pooling
+   - Migration script from SQLite to PostgreSQL
+   - Environment-based database selection
+ ⚡ Performance Optimization
+   - Cache face encodings to avoid recomputation
+   - Redis/Memcached integration for encoding cache
+   - Implement lazy loading for event images
+   - Optimize database queries with indexes
+ 🔄 Resume Interrupted Indexing
+   - Save progress checkpoints during indexing
+   - Resume from last checkpoint on failure/interruption
+   - Skip already processed photos
+   - Progress persistence in database
+ 📸 Batch Upload Improvements
+   - Drag & drop multiple files
+   - Image preview before upload
+   - Client-side image validation
+   - Progress indicator for each file
+   - Concurrent upload support
+
 💡 Future (Phase 4 - NICE TO HAVE)
- Vector database integration (Milvus/Faiss)
- Support multiple events พร้อมกัน
- Advanced face clustering
- Photo quality detection
+ 🗄️ Vector Database Integration
+   - Integrate Milvus or Faiss for faster similarity search
+   - Migrate face encodings to vector database
+   - Improve search performance for large datasets
+ ⚙️ Multiple Events Support
+   - Support concurrent indexing for multiple events
+   - Queue system for background tasks
+   - Resource allocation and throttling
+ 🔍 Advanced Face Clustering
+   - Group similar faces automatically
+   - Detect duplicate faces across photos
+   - Face grouping UI for photographers
+ 📊 Photo Quality Detection
+   - Detect blurry or low-quality photos
+   - Auto-skip poor quality images during indexing
+   - Quality score for each photo
+ 📈 Analytics Dashboard (Future Enhancement)
+   - Statistics and insights for photographers
+   - Search analytics (popular events, search patterns)
+   - Performance metrics (indexing speed, search time)
+   - Usage graphs and charts
+ 🔔 Notification System (Future Enhancement)
+   - Email notifications for indexing completion
+   - LINE/Telegram bot integration
+   - Push notifications for photographers
+   - SMS alerts for critical events
+ 🎨 Photo Gallery View (Future Enhancement)
+   - Grid view with lightbox
+   - Download all photos as ZIP
+   - Share photos via social media
+   - Photo slideshow mode
+ 🔐 API Authentication (Future Enhancement)
+   - JWT token-based API authentication
+   - API rate limiting
+   - API key management for third-party integrations
+   - OAuth2 for external apps
+ 🌐 Multi-language Support (Future Enhancement)
+   - Internationalization (i18n) framework
+   - Thai and English language support
+   - Language switcher in UI
+   - Localized error messages
+ 📱 Mobile App (Future Enhancement)
+   - Progressive Web App (PWA)
+   - Native mobile app (React Native)
+   - Mobile-optimized UI
+   - Offline support for event pages
 License
