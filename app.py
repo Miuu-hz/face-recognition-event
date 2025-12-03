@@ -267,6 +267,358 @@ def print_config():
     print(f"Num Jitters:  {FACE_RECOGNITION_CONFIG['num_jitters']}")
     print("="*50 + "\n")
 
+# --- Auto-Sync Configuration ---
+AUTO_SYNC_CONFIG = {
+    'default_interval_minutes': int(os.getenv('AUTO_SYNC_INTERVAL', '2')),  # Check every 2 minutes by default
+    'min_interval_seconds': 30,  # Minimum 30 seconds between checks
+}
+
+# Store for auto-sync threads
+auto_sync_threads = {}
+auto_sync_threads_lock = threading.Lock()
+
+# --- Drive Changes API Functions ---
+def get_start_page_token(drive_service, folder_id):
+    """Get the initial page token for tracking changes"""
+    try:
+        # Get the start page token for the entire drive
+        response = drive_service.changes().getStartPageToken().execute()
+        start_page_token = response.get('startPageToken')
+        logger.info(f"Retrieved start page token: {start_page_token}")
+        return start_page_token
+    except Exception as e:
+        logger.error(f"Error getting start page token: {e}")
+        raise GoogleDriveError(f"Failed to get start page token: {e}")
+
+def check_drive_changes(drive_service, folder_id, start_page_token):
+    """Check for new files in the folder since last sync
+
+    Returns:
+        tuple: (new_photos, new_page_token)
+        - new_photos: list of new photo files
+        - new_page_token: updated page token for next check
+    """
+    try:
+        new_photos = []
+        page_token = start_page_token
+
+        while page_token is not None:
+            # Get changes since last token
+            response = drive_service.changes().list(
+                pageToken=page_token,
+                spaces='drive',
+                fields='nextPageToken, newStartPageToken, changes(fileId, file(id, name, mimeType, parents, trashed))',
+                pageSize=100
+            ).execute()
+
+            # Process changes
+            for change in response.get('changes', []):
+                file_info = change.get('file')
+                if not file_info:
+                    continue
+
+                # Check if file is in our folder and is an image
+                parents = file_info.get('parents', [])
+                mime_type = file_info.get('mimeType', '')
+                is_trashed = file_info.get('trashed', False)
+
+                if (folder_id in parents and
+                    mime_type in ['image/jpeg', 'image/png', 'image/jpg'] and
+                    not is_trashed):
+
+                    new_photos.append({
+                        'id': file_info['id'],
+                        'name': file_info['name']
+                    })
+                    logger.debug(f"New photo detected: {file_info['name']}")
+
+            # Get next page token
+            page_token = response.get('nextPageToken')
+
+            # If no more pages, get the new start page token
+            if page_token is None:
+                new_start_page_token = response.get('newStartPageToken')
+                return new_photos, new_start_page_token
+
+        return new_photos, start_page_token
+
+    except HttpError as e:
+        if e.resp.status == 400:
+            # Invalid page token - need to reset
+            logger.warning("Invalid page token, resetting...")
+            return None, None
+        else:
+            logger.error(f"HTTP error checking changes: {e}")
+            raise GoogleDriveError(f"Failed to check drive changes: {e}")
+    except Exception as e:
+        logger.error(f"Error checking drive changes: {e}")
+        raise GoogleDriveError(f"Failed to check drive changes: {e}")
+
+def index_new_photos(event_id, new_photos, drive_service, db_conn):
+    """Index only new photos (incremental indexing)
+
+    Args:
+        event_id: Event ID
+        new_photos: List of new photo dicts with 'id' and 'name'
+        drive_service: Google Drive service
+        db_conn: Database connection
+
+    Returns:
+        tuple: (photos_indexed, faces_found)
+    """
+    photos_indexed = 0
+    faces_found = 0
+    temp_files = []
+
+    try:
+        for photo in new_photos:
+            photo_id = photo['id']
+            photo_name = photo['name']
+
+            # Check if already synced
+            existing = db_conn.execute(
+                'SELECT 1 FROM synced_photos WHERE event_id = ? AND photo_id = ?',
+                (event_id, photo_id)
+            ).fetchone()
+
+            if existing:
+                logger.debug(f"Photo {photo_name} already synced, skipping")
+                continue
+
+            try:
+                # Download image
+                temp_path = download_image_temp(drive_service, photo_id)
+                if not temp_path:
+                    logger.warning(f"Failed to download {photo_name}, skipping")
+                    continue
+
+                temp_files.append(temp_path)
+
+                # Extract faces
+                try:
+                    faces = extract_face_encodings(temp_path)
+                except ImageProcessingError as e:
+                    logger.warning(f"Skipping {photo_name}: {e}")
+                    # Mark as synced even if no faces found
+                    db_conn.execute(
+                        'INSERT INTO synced_photos (event_id, photo_id, photo_name) VALUES (?, ?, ?)',
+                        (event_id, photo_id, photo_name)
+                    )
+                    db_conn.commit()
+                    continue
+
+                if faces:
+                    logger.info(f"Found {len(faces)} face(s) in {photo_name}")
+                    for face_data in faces:
+                        encoding_blob = face_data['encoding'].tobytes()
+                        location_json = json.dumps(face_data['location'])
+
+                        db_conn.execute(
+                            'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
+                            (event_id, photo_id, photo_name, encoding_blob, location_json)
+                        )
+                        faces_found += 1
+
+                # Mark as synced
+                db_conn.execute(
+                    'INSERT INTO synced_photos (event_id, photo_id, photo_name) VALUES (?, ?, ?)',
+                    (event_id, photo_id, photo_name)
+                )
+                db_conn.commit()
+                photos_indexed += 1
+
+            except Exception as e:
+                logger.error(f"Error processing {photo_name}: {e}")
+                continue
+
+        # Update event stats
+        current_stats = db_conn.execute(
+            'SELECT indexed_photos, total_faces FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
+
+        if current_stats:
+            new_indexed = current_stats['indexed_photos'] + photos_indexed
+            new_total_faces = current_stats['total_faces'] + faces_found
+
+            db_conn.execute(
+                'UPDATE events SET indexed_photos = ?, total_faces = ?, last_sync_at = ? WHERE id = ?',
+                (new_indexed, new_total_faces, datetime.now(), event_id)
+            )
+            db_conn.commit()
+
+        return photos_indexed, faces_found
+
+    finally:
+        # Clean up temp files
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except:
+                pass
+
+def run_auto_sync_loop(event_id, folder_id, credentials_dict, sync_interval_minutes):
+    """Background loop that checks for new photos and indexes them
+
+    This runs in a separate thread for each event with auto-sync enabled.
+    """
+    db_conn = sqlite3.connect(DATABASE)
+    db_conn.row_factory = sqlite3.Row
+
+    logger.info(f"Starting auto-sync loop for event {event_id} (interval: {sync_interval_minutes} min)")
+
+    try:
+        # Build Drive service
+        creds = Credentials(**credentials_dict)
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Get initial page token if not exists
+        event_data = db_conn.execute(
+            'SELECT drive_start_page_token FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
+
+        page_token = event_data['drive_start_page_token']
+        if not page_token:
+            page_token = get_start_page_token(drive_service, folder_id)
+            db_conn.execute(
+                'UPDATE events SET drive_start_page_token = ? WHERE id = ?',
+                (page_token, event_id)
+            )
+            db_conn.commit()
+            logger.info(f"Initialized page token for event {event_id}: {page_token}")
+
+        # Main sync loop
+        while True:
+            # Check if auto-sync is still enabled
+            event_status = db_conn.execute(
+                'SELECT auto_sync_enabled FROM events WHERE id = ?',
+                (event_id,)
+            ).fetchone()
+
+            if not event_status or not event_status['auto_sync_enabled']:
+                logger.info(f"Auto-sync disabled for event {event_id}, stopping loop")
+                break
+
+            try:
+                # Check for changes
+                logger.debug(f"Checking for changes in event {event_id}...")
+                new_photos, new_page_token = check_drive_changes(drive_service, folder_id, page_token)
+
+                if new_page_token is None:
+                    # Invalid token, need to reset
+                    logger.warning(f"Resetting page token for event {event_id}")
+                    page_token = get_start_page_token(drive_service, folder_id)
+                    db_conn.execute(
+                        'UPDATE events SET drive_start_page_token = ? WHERE id = ?',
+                        (page_token, event_id)
+                    )
+                    db_conn.commit()
+                else:
+                    page_token = new_page_token
+                    db_conn.execute(
+                        'UPDATE events SET drive_start_page_token = ? WHERE id = ?',
+                        (page_token, event_id)
+                    )
+                    db_conn.commit()
+
+                if new_photos:
+                    logger.info(f"Found {len(new_photos)} new photo(s) for event {event_id}")
+                    photos_indexed, faces_found = index_new_photos(
+                        event_id, new_photos, drive_service, db_conn
+                    )
+                    logger.info(f"Auto-sync completed: {photos_indexed} photos, {faces_found} faces")
+                else:
+                    logger.debug(f"No new photos for event {event_id}")
+
+            except GoogleDriveError as e:
+                logger.error(f"Drive error in auto-sync loop for event {event_id}: {e}")
+                # Continue loop despite error
+            except Exception as e:
+                logger.error(f"Unexpected error in auto-sync loop for event {event_id}: {e}", exc_info=True)
+                # Continue loop despite error
+
+            # Sleep for the configured interval
+            import time
+            sleep_seconds = max(sync_interval_minutes * 60, AUTO_SYNC_CONFIG['min_interval_seconds'])
+            time.sleep(sleep_seconds)
+
+    except Exception as e:
+        logger.error(f"Fatal error in auto-sync loop for event {event_id}: {e}", exc_info=True)
+    finally:
+        db_conn.close()
+        # Remove thread from registry
+        with auto_sync_threads_lock:
+            if event_id in auto_sync_threads:
+                del auto_sync_threads[event_id]
+        logger.info(f"Auto-sync loop stopped for event {event_id}")
+
+def start_auto_sync(event_id, folder_id, credentials_dict, sync_interval_minutes=None):
+    """Start auto-sync background thread for an event"""
+    if sync_interval_minutes is None:
+        sync_interval_minutes = AUTO_SYNC_CONFIG['default_interval_minutes']
+
+    with auto_sync_threads_lock:
+        # Check if already running
+        if event_id in auto_sync_threads and auto_sync_threads[event_id].is_alive():
+            logger.warning(f"Auto-sync already running for event {event_id}")
+            return False
+
+        # Start new thread
+        thread = threading.Thread(
+            target=run_auto_sync_loop,
+            args=(event_id, folder_id, credentials_dict, sync_interval_minutes),
+            daemon=True
+        )
+        thread.start()
+        auto_sync_threads[event_id] = thread
+
+        logger.info(f"Started auto-sync thread for event {event_id}")
+        return True
+
+def stop_auto_sync(event_id):
+    """Stop auto-sync for an event (it will stop on next check)"""
+    # Update database to disable auto-sync
+    # The thread will check this flag and stop itself
+    logger.info(f"Stopping auto-sync for event {event_id}")
+    return True
+
+def restore_auto_sync_on_startup():
+    """Restore auto-sync threads for events that had auto-sync enabled
+
+    This should be called on server startup to resume auto-sync
+    for events that were running before server restart.
+    """
+    logger.info("Restoring auto-sync threads on startup...")
+
+    # Note: We can't access session credentials here since this runs at startup
+    # Auto-sync will need to be manually re-enabled after server restart
+    # This is a limitation of using session-based credentials
+
+    # For now, we'll just log which events had auto-sync enabled
+    try:
+        db_conn = sqlite3.connect(DATABASE)
+        db_conn.row_factory = sqlite3.Row
+
+        events = db_conn.execute(
+            'SELECT id, name FROM events WHERE auto_sync_enabled = 1'
+        ).fetchall()
+
+        if events:
+            logger.info(f"Found {len(events)} event(s) with auto-sync enabled:")
+            for event in events:
+                logger.info(f"  - {event['name']} (ID: {event['id']})")
+            logger.warning("Auto-sync threads cannot be automatically restored due to session credentials.")
+            logger.warning("Photographer will need to re-enable auto-sync for these events after logging in.")
+        else:
+            logger.info("No events with auto-sync enabled")
+
+        db_conn.close()
+
+    except Exception as e:
+        logger.error(f"Error restoring auto-sync on startup: {e}", exc_info=True)
+
 # --- Background Task Management ---
 class Task:
     """Represents a background task with progress tracking"""
@@ -921,6 +1273,127 @@ def stream_event_task(event_id):
         }
     )
 
+@app.route('/api/event/<event_id>/auto-sync/enable', methods=['POST'])
+def enable_auto_sync(event_id):
+    """Enable auto-sync for an event"""
+    try:
+        # Validate event ID
+        event_id = validate_event_id(event_id)
+
+        # Check authentication
+        if 'credentials' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Get event data
+        db = get_db()
+        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        folder_id = event_data['drive_folder_id']
+        if not folder_id:
+            return jsonify({'error': 'No Google Drive folder linked'}), 400
+
+        # Get sync interval from request (optional)
+        data = request.get_json() or {}
+        sync_interval = data.get('interval_minutes', AUTO_SYNC_CONFIG['default_interval_minutes'])
+
+        # Validate interval
+        if sync_interval < 1:
+            return jsonify({'error': 'Interval must be at least 1 minute'}), 400
+
+        # Enable auto-sync in database
+        db.execute(
+            'UPDATE events SET auto_sync_enabled = 1, sync_interval_minutes = ? WHERE id = ?',
+            (sync_interval, event_id)
+        )
+        db.commit()
+
+        # Start auto-sync thread
+        credentials_dict = session['credentials']
+        success = start_auto_sync(event_id, folder_id, credentials_dict, sync_interval)
+
+        if success:
+            logger.info(f"Auto-sync enabled for event {event_id} with interval {sync_interval} minutes")
+            return jsonify({
+                'message': 'Auto-sync enabled',
+                'interval_minutes': sync_interval
+            }), 200
+        else:
+            return jsonify({'error': 'Auto-sync already running'}), 400
+
+    except ValidationError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error enabling auto-sync: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to enable auto-sync'}), 500
+
+@app.route('/api/event/<event_id>/auto-sync/disable', methods=['POST'])
+def disable_auto_sync(event_id):
+    """Disable auto-sync for an event"""
+    try:
+        # Validate event ID
+        event_id = validate_event_id(event_id)
+
+        # Get event data
+        db = get_db()
+        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Disable auto-sync in database
+        db.execute(
+            'UPDATE events SET auto_sync_enabled = 0 WHERE id = ?',
+            (event_id,)
+        )
+        db.commit()
+
+        stop_auto_sync(event_id)
+
+        logger.info(f"Auto-sync disabled for event {event_id}")
+        return jsonify({'message': 'Auto-sync disabled'}), 200
+
+    except ValidationError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error disabling auto-sync: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to disable auto-sync'}), 500
+
+@app.route('/api/event/<event_id>/auto-sync/status')
+def get_auto_sync_status(event_id):
+    """Get auto-sync status for an event"""
+    try:
+        # Validate event ID
+        event_id = validate_event_id(event_id)
+
+        db = get_db()
+        event_data = db.execute(
+            'SELECT auto_sync_enabled, sync_interval_minutes, last_sync_at FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
+
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Check if thread is actually running
+        with auto_sync_threads_lock:
+            is_running = event_id in auto_sync_threads and auto_sync_threads[event_id].is_alive()
+
+        return jsonify({
+            'enabled': bool(event_data['auto_sync_enabled']),
+            'running': is_running,
+            'interval_minutes': event_data['sync_interval_minutes'] or AUTO_SYNC_CONFIG['default_interval_minutes'],
+            'last_sync_at': event_data['last_sync_at']
+        }), 200
+
+    except ValidationError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error getting auto-sync status: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to get auto-sync status'}), 500
+
 @app.route('/event/<event_id>')
 def event_page(event_id):
     db = get_db()
@@ -1104,6 +1577,7 @@ def search_faces(event_id):
 
 if __name__ == '__main__':
     print_config()
+    restore_auto_sync_on_startup()
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', '5000'))
     debug = os.getenv('DEBUG', 'True').lower() == 'true'
