@@ -501,3 +501,217 @@ google.auth.exceptions.RefreshError: The credentials do not contain the necessar
 [2025-12-02 12:51:01] DEBUG [face_recognition_app:1057] - Match found: f&g3.jpg (distance: 0.279)
 [2025-12-02 12:51:01] INFO [face_recognition_app:1061] - Search completed for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5: Checked 54 faces, found 7 matching photos
 [2025-12-02 15:12:48] INFO [face_recognition_app:983] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-02 15:22:02] INFO [face_recognition_app:983] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-02 15:22:27] INFO [face_recognition_app:652] - Created event: kmp (ID: 64aab524-6c5e-4dce-859a-de9f6a699fcc)
+[2025-12-02 15:34:46] WARNING [face_recognition_app:1134] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-02 15:34:57] INFO [face_recognition_app:988] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-02 15:35:10] INFO [face_recognition_app:652] - Created event: sdww (ID: 57c9e2b4-fbce-4d2b-9466-17c70a75da8f)
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1039] - Found face in uploaded image: b&f2.jpg
+[2025-12-02 15:35:31] INFO [face_recognition_app:1048] - Created average encoding from 1 face(s) for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1082] - Match found: F&F1.jpg (distance: 0.236)
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1082] - Match found: b&f1.jpg (distance: 0.356)
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1082] - Match found: b&f2.jpg (distance: 0.000)
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1082] - Match found: G1.jpg (distance: 0.287)
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1082] - Match found: f&g2.jpg (distance: 0.296)
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1082] - Match found: F&g1.jpg (distance: 0.288)
+[2025-12-02 15:35:31] DEBUG [face_recognition_app:1082] - Match found: f&g3.jpg (distance: 0.279)
+[2025-12-02 15:35:31] INFO [face_recognition_app:1086] - Search completed for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5: Checked 54 faces, found 7 matching photos
+[2025-12-03 15:16:12] WARNING [face_recognition_app:1223] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-03 15:16:37] INFO [face_recognition_app:1077] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 15:16:44] INFO [face_recognition_app:720] - Created event: Test (ID: 8fdc00e9-99e2-41bb-b056-72a7490dc8e9)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1128] - Found face in uploaded image: bb2.jpg
+[2025-12-03 15:17:39] INFO [face_recognition_app:1137] - Created average encoding from 1 face(s) for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb3.jpg (distance: 0.421)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: b&f1.jpg (distance: 0.446)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: b&f2.jpg (distance: 0.481)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb8.jpg (distance: 0.432)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: none.jpg (distance: 0.482)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb1.jpg (distance: 0.423)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb2.jpg (distance: 0.000)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb5.jpg (distance: 0.374)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb6.jpg (distance: 0.474)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb7.jpg (distance: 0.463)
+[2025-12-03 15:17:39] DEBUG [face_recognition_app:1171] - Match found: bb9.jpg (distance: 0.490)
+[2025-12-03 15:17:39] INFO [face_recognition_app:1175] - Search completed for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5: Checked 54 faces, found 11 matching photos
+[2025-12-03 15:19:18] WARNING [face_recognition_app:1223] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-03 15:19:40] INFO [face_recognition_app:1077] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 15:20:34] INFO [face_recognition_app:720] - Created event: Test (ID: 0f401f26-ed43-476d-a590-bd946768432a)
+[2025-12-03 15:20:38] INFO [face_recognition_app:191] - Successfully verified access to folder: 01 SI/VI (ID: 1He4XjE7HAF8xrMLtmeHf9tPJnTUgXJJl)
+[2025-12-03 15:20:38] INFO [face_recognition_app:835] - Set folder 1He4XjE7HAF8xrMLtmeHf9tPJnTUgXJJl for event 0f401f26-ed43-476d-a590-bd946768432a
+[2025-12-03 15:20:38] ERROR [face_recognition_app:1023] - Error getting checkpoint status: no such table: indexing_checkpoints
+[2025-12-03 15:20:47] INFO [face_recognition_app:720] - Created event: Test (ID: 848da1ca-7904-4c01-ae66-ccc86965659c)
+[2025-12-03 15:20:57] INFO [face_recognition_app:191] - Successfully verified access to folder: phopy app test photo (ID: 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb)
+[2025-12-03 15:20:57] INFO [face_recognition_app:895] - Set folder 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb for event 848da1ca-7904-4c01-ae66-ccc86965659c via link
+[2025-12-03 15:20:57] ERROR [face_recognition_app:1023] - Error getting checkpoint status: no such table: indexing_checkpoints
+[2025-12-03 15:21:01] INFO [face_recognition_app:783] - Started background indexing task 48a3b70b-1ae6-47e6-a5d3-1fda6488a8b2 for event 848da1ca-7904-4c01-ae66-ccc86965659c
+[2025-12-03 15:21:02] INFO [face_recognition_app:519] - Background Task 48a3b70b-1ae6-47e6-a5d3-1fda6488a8b2: Starting Face Indexing for Event: Test
+[2025-12-03 15:21:02] ERROR [face_recognition_app:648] - Task 48a3b70b-1ae6-47e6-a5d3-1fda6488a8b2: Unexpected error: no such table: indexing_checkpoints
+Traceback (most recent call last):
+  File "C:\demo\Phopy\app.py", line 527, in run_indexing_background
+    processed_photos = get_checkpoints(db_conn, event_id)
+  File "C:\demo\Phopy\app.py", line 273, in get_checkpoints
+    cursor = db_conn.execute(
+sqlite3.OperationalError: no such table: indexing_checkpoints
+[2025-12-03 15:29:59] WARNING [face_recognition_app:1284] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-03 15:30:21] INFO [face_recognition_app:1138] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 15:30:47] INFO [face_recognition_app:781] - Created event: Test (ID: d7c7e99e-d949-4cab-9b67-18cac5fdbecd)
+[2025-12-03 15:30:56] INFO [face_recognition_app:191] - Successfully verified access to folder: phopy app test photo (ID: 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb)
+[2025-12-03 15:30:56] INFO [face_recognition_app:956] - Set folder 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb for event d7c7e99e-d949-4cab-9b67-18cac5fdbecd via link
+[2025-12-03 15:30:56] INFO [face_recognition_app:281] - Creating indexing_checkpoints table (auto-migration)...
+[2025-12-03 15:31:08] INFO [face_recognition_app:844] - Started background indexing task 4cc18ee8-1d97-4937-8515-58ffbe524f6f for event d7c7e99e-d949-4cab-9b67-18cac5fdbecd
+[2025-12-03 15:31:08] INFO [face_recognition_app:580] - Background Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Starting Face Indexing for Event: Test
+[2025-12-03 15:31:08] INFO [face_recognition_app:598] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Starting fresh indexing (no checkpoints found)
+[2025-12-03 15:31:08] INFO [face_recognition_app:615] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 27 photos to process
+[2025-12-03 15:31:08] DEBUG [face_recognition_app:621] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing batch 1 (20 photos)
+[2025-12-03 15:31:08] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing fuji3.jpg
+[2025-12-03 15:31:20] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 1 faces in fuji3.jpg
+[2025-12-03 15:31:20] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing fuji2.jpg
+[2025-12-03 15:31:32] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 1 faces in fuji2.jpg
+[2025-12-03 15:31:32] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing F&F1.jpg
+[2025-12-03 15:31:52] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 5 faces in F&F1.jpg
+[2025-12-03 15:31:52] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing fg1.jpg
+[2025-12-03 15:31:57] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 1 faces in fg1.jpg
+[2025-12-03 15:31:57] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing bb3.jpg
+[2025-12-03 15:32:05] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 1 faces in bb3.jpg
+[2025-12-03 15:32:05] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing b&f1.jpg
+[2025-12-03 15:32:11] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 2 faces in b&f1.jpg
+[2025-12-03 15:32:11] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing b&f2.jpg
+[2025-12-03 15:32:21] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 2 faces in b&f2.jpg
+[2025-12-03 15:32:21] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing fg2.jpg
+[2025-12-03 15:32:26] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 1 faces in fg2.jpg
+[2025-12-03 15:32:26] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing fuji4.jpg
+[2025-12-03 15:32:29] DEBUG [face_recognition_app:655] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Found 1 faces in fuji4.jpg
+[2025-12-03 15:32:29] DEBUG [face_recognition_app:634] - Task 4cc18ee8-1d97-4937-8515-58ffbe524f6f: Processing G1.jpg
+[2025-12-03 15:32:52] WARNING [face_recognition_app:1284] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-03 15:33:05] INFO [face_recognition_app:1138] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 15:43:22] WARNING [face_recognition_app:1284] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-03 15:43:45] WARNING [face_recognition_app:1284] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-03 15:43:54] INFO [face_recognition_app:781] - Created event: Test (ID: b721bbdf-fab1-430a-af1c-9d19831069bb)
+[2025-12-03 15:44:04] INFO [face_recognition_app:1138] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 15:44:14] INFO [face_recognition_app:191] - Successfully verified access to folder: phopy app test photo (ID: 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb)
+[2025-12-03 15:44:14] INFO [face_recognition_app:956] - Set folder 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb for event b721bbdf-fab1-430a-af1c-9d19831069bb via link
+[2025-12-03 15:44:17] INFO [face_recognition_app:844] - Started background indexing task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb for event b721bbdf-fab1-430a-af1c-9d19831069bb
+[2025-12-03 15:44:17] INFO [face_recognition_app:580] - Background Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Starting Face Indexing for Event: Test
+[2025-12-03 15:44:17] INFO [face_recognition_app:598] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Starting fresh indexing (no checkpoints found)
+[2025-12-03 15:44:18] INFO [face_recognition_app:615] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Found 27 photos to process
+[2025-12-03 15:44:18] DEBUG [face_recognition_app:621] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Processing batch 1 (20 photos)
+[2025-12-03 15:44:18] DEBUG [face_recognition_app:634] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Processing fuji3.jpg
+[2025-12-03 15:44:31] DEBUG [face_recognition_app:655] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Found 1 faces in fuji3.jpg
+[2025-12-03 15:44:31] DEBUG [face_recognition_app:634] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Processing fuji2.jpg
+[2025-12-03 15:44:36] DEBUG [face_recognition_app:655] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Found 1 faces in fuji2.jpg
+[2025-12-03 15:44:36] DEBUG [face_recognition_app:634] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Processing F&F1.jpg
+[2025-12-03 15:44:52] DEBUG [face_recognition_app:655] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Found 5 faces in F&F1.jpg
+[2025-12-03 15:44:52] DEBUG [face_recognition_app:634] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Processing fg1.jpg
+[2025-12-03 15:45:04] DEBUG [face_recognition_app:655] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Found 1 faces in fg1.jpg
+[2025-12-03 15:45:04] DEBUG [face_recognition_app:634] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Processing bb3.jpg
+[2025-12-03 15:45:15] DEBUG [face_recognition_app:655] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Found 1 faces in bb3.jpg
+[2025-12-03 15:45:15] DEBUG [face_recognition_app:634] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Processing b&f1.jpg
+[2025-12-03 15:45:26] DEBUG [face_recognition_app:655] - Task 8fcaf485-0e58-47d2-80d8-640dd8fb69bb: Found 2 faces in b&f1.jpg
+[2025-12-03 16:05:56] INFO [face_recognition_app:1150] - Paused indexing for event b721bbdf-fab1-430a-af1c-9d19831069bb
+[2025-12-03 16:06:01] INFO [face_recognition_app:855] - Started background indexing task e54f57d0-b067-464a-955e-0d39e75add56 for event b721bbdf-fab1-430a-af1c-9d19831069bb
+[2025-12-03 16:06:01] INFO [face_recognition_app:580] - Background Task e54f57d0-b067-464a-955e-0d39e75add56: Starting Face Indexing for Event: Test
+[2025-12-03 16:06:01] INFO [face_recognition_app:593] - Task e54f57d0-b067-464a-955e-0d39e75add56: Resuming from checkpoint - 5 photos already processed
+[2025-12-03 16:06:02] INFO [face_recognition_app:613] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 27 total photos (5 already done, 22 remaining)
+[2025-12-03 16:06:02] DEBUG [face_recognition_app:621] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing batch 1 (20 photos)
+[2025-12-03 16:06:02] DEBUG [face_recognition_app:629] - Task e54f57d0-b067-464a-955e-0d39e75add56: Skipping fuji3.jpg (already processed)
+[2025-12-03 16:06:02] DEBUG [face_recognition_app:629] - Task e54f57d0-b067-464a-955e-0d39e75add56: Skipping fuji2.jpg (already processed)
+[2025-12-03 16:06:02] DEBUG [face_recognition_app:629] - Task e54f57d0-b067-464a-955e-0d39e75add56: Skipping F&F1.jpg (already processed)
+[2025-12-03 16:06:02] DEBUG [face_recognition_app:629] - Task e54f57d0-b067-464a-955e-0d39e75add56: Skipping fg1.jpg (already processed)
+[2025-12-03 16:06:02] DEBUG [face_recognition_app:629] - Task e54f57d0-b067-464a-955e-0d39e75add56: Skipping bb3.jpg (already processed)
+[2025-12-03 16:06:02] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing b&f1.jpg
+[2025-12-03 16:06:10] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 2 faces in b&f1.jpg
+[2025-12-03 16:06:10] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing b&f2.jpg
+[2025-12-03 16:06:17] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 2 faces in b&f2.jpg
+[2025-12-03 16:06:17] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing fg2.jpg
+[2025-12-03 16:06:21] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in fg2.jpg
+[2025-12-03 16:06:21] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing fuji4.jpg
+[2025-12-03 16:06:24] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in fuji4.jpg
+[2025-12-03 16:06:24] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing G1.jpg
+[2025-12-03 16:06:40] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 7 faces in G1.jpg
+[2025-12-03 16:06:40] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb8.jpg
+[2025-12-03 16:06:48] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb8.jpg
+[2025-12-03 16:06:48] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing none.jpg
+[2025-12-03 16:06:56] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 2 faces in none.jpg
+[2025-12-03 16:06:56] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb1.jpg
+[2025-12-03 16:07:01] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb1.jpg
+[2025-12-03 16:07:01] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb2.jpg
+[2025-12-03 16:07:05] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb2.jpg
+[2025-12-03 16:07:05] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb5.jpg
+[2025-12-03 16:07:09] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb5.jpg
+[2025-12-03 16:07:09] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb6.jpg
+[2025-12-03 16:07:13] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb6.jpg
+[2025-12-03 16:07:13] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb4.jpg
+[2025-12-03 16:07:18] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb4.jpg
+[2025-12-03 16:07:18] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb7.jpg
+[2025-12-03 16:07:22] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb7.jpg
+[2025-12-03 16:07:22] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing none3.jpg
+[2025-12-03 16:07:34] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 4 faces in none3.jpg
+[2025-12-03 16:07:34] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing none4.jpg
+[2025-12-03 16:07:47] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 5 faces in none4.jpg
+[2025-12-03 16:07:47] DEBUG [face_recognition_app:621] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing batch 2 (7 photos)
+[2025-12-03 16:07:47] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing none2.jpg
+[2025-12-03 16:07:54] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 4 faces in none2.jpg
+[2025-12-03 16:07:54] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing f&g2.jpg
+[2025-12-03 16:07:58] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 2 faces in f&g2.jpg
+[2025-12-03 16:07:58] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing F&g1.jpg
+[2025-12-03 16:08:03] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 3 faces in F&g1.jpg
+[2025-12-03 16:08:03] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing f&g3.jpg
+[2025-12-03 16:08:08] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 2 faces in f&g3.jpg
+[2025-12-03 16:08:08] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing none6.jpg
+[2025-12-03 16:08:10] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in none6.jpg
+[2025-12-03 16:08:10] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing none7.jpg
+[2025-12-03 16:08:13] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in none7.jpg
+[2025-12-03 16:08:13] DEBUG [face_recognition_app:634] - Task e54f57d0-b067-464a-955e-0d39e75add56: Processing bb9.jpg
+[2025-12-03 16:08:16] DEBUG [face_recognition_app:655] - Task e54f57d0-b067-464a-955e-0d39e75add56: Found 1 faces in bb9.jpg
+[2025-12-03 16:08:16] INFO [face_recognition_app:351] - Cleared checkpoints for event b721bbdf-fab1-430a-af1c-9d19831069bb
+[2025-12-03 16:08:16] INFO [face_recognition_app:698] - Task e54f57d0-b067-464a-955e-0d39e75add56: Indexing completed successfully. Photos: 27, Faces: 54
+[2025-12-03 22:59:55] WARNING [face_recognition_app:1419] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-03 23:00:15] INFO [face_recognition_app:1273] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 23:00:24] INFO [face_recognition_app:781] - Created event: Test (ID: 65b12cbd-a440-4a6d-9e92-e235b0f67fa4)
+[2025-12-03 23:00:27] INFO [face_recognition_app:191] - Successfully verified access to folder: 01 SI/VI (ID: 1He4XjE7HAF8xrMLtmeHf9tPJnTUgXJJl)
+[2025-12-03 23:00:27] INFO [face_recognition_app:907] - Set folder 1He4XjE7HAF8xrMLtmeHf9tPJnTUgXJJl for event 65b12cbd-a440-4a6d-9e92-e235b0f67fa4
+[2025-12-03 23:00:34] INFO [face_recognition_app:781] - Created event: Test (ID: e09a866c-816f-4ada-8242-0b9f6e46d606)
+[2025-12-03 23:00:58] INFO [face_recognition_app:191] - Successfully verified access to folder: phopy app test photo (ID: 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb)
+[2025-12-03 23:00:58] INFO [face_recognition_app:967] - Set folder 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb for event e09a866c-816f-4ada-8242-0b9f6e46d606 via link
+[2025-12-03 23:01:00] INFO [face_recognition_app:855] - Started background indexing task 79075cc7-dac9-4cf3-a50d-2bf8c63c0c00 for event e09a866c-816f-4ada-8242-0b9f6e46d606
+[2025-12-03 23:01:00] INFO [face_recognition_app:580] - Background Task 79075cc7-dac9-4cf3-a50d-2bf8c63c0c00: Starting Face Indexing for Event: Test
+[2025-12-03 23:01:00] INFO [face_recognition_app:598] - Task 79075cc7-dac9-4cf3-a50d-2bf8c63c0c00: Starting fresh indexing (no checkpoints found)
+[2025-12-03 23:01:01] INFO [face_recognition_app:615] - Task 79075cc7-dac9-4cf3-a50d-2bf8c63c0c00: Found 27 photos to process
+[2025-12-03 23:01:01] DEBUG [face_recognition_app:621] - Task 79075cc7-dac9-4cf3-a50d-2bf8c63c0c00: Processing batch 1 (20 photos)
+[2025-12-03 23:01:01] DEBUG [face_recognition_app:634] - Task 79075cc7-dac9-4cf3-a50d-2bf8c63c0c00: Processing fuji3.jpg
+[2025-12-03 23:04:49] DEBUG [face_recognition_app:655] - Task 79075cc7-dac9-4cf3-a50d-2bf8c63c0c00: Found 1 faces in fuji3.jpg
+[2025-12-03 23:05:53] INFO [face_recognition_app:1273] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 23:05:56] INFO [face_recognition_app:1150] - Paused indexing for event e09a866c-816f-4ada-8242-0b9f6e46d606
+[2025-12-03 23:05:58] INFO [face_recognition_app:855] - Started background indexing task ce1fc6c9-2aa8-4bbd-8591-267fe82f6550 for event e09a866c-816f-4ada-8242-0b9f6e46d606
+[2025-12-03 23:05:58] INFO [face_recognition_app:580] - Background Task ce1fc6c9-2aa8-4bbd-8591-267fe82f6550: Starting Face Indexing for Event: Test
+[2025-12-03 23:05:58] INFO [face_recognition_app:598] - Task ce1fc6c9-2aa8-4bbd-8591-267fe82f6550: Starting fresh indexing (no checkpoints found)
+[2025-12-03 23:06:00] INFO [face_recognition_app:615] - Task ce1fc6c9-2aa8-4bbd-8591-267fe82f6550: Found 27 photos to process
+[2025-12-03 23:06:00] DEBUG [face_recognition_app:621] - Task ce1fc6c9-2aa8-4bbd-8591-267fe82f6550: Processing batch 1 (20 photos)
+[2025-12-03 23:06:00] DEBUG [face_recognition_app:634] - Task ce1fc6c9-2aa8-4bbd-8591-267fe82f6550: Processing fuji3.jpg
+[2025-12-03 23:08:48] INFO [face_recognition_app:1273] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-03 23:14:37] INFO [face_recognition_app:781] - Created event: Test (ID: 7b3305af-3275-41ef-8e15-d575b1666291)
+[2025-12-03 23:14:40] INFO [face_recognition_app:191] - Successfully verified access to folder: 01 SI/VI (ID: 1He4XjE7HAF8xrMLtmeHf9tPJnTUgXJJl)
+[2025-12-03 23:14:40] INFO [face_recognition_app:907] - Set folder 1He4XjE7HAF8xrMLtmeHf9tPJnTUgXJJl for event 7b3305af-3275-41ef-8e15-d575b1666291
+[2025-12-03 23:14:45] INFO [face_recognition_app:781] - Created event: Test (ID: e91a6eef-6e8a-4076-9193-930dd9301a21)
+[2025-12-03 23:14:53] INFO [face_recognition_app:191] - Successfully verified access to folder: Phopy 2 pic (ID: 1wRr6RFm0AYxlQWO_Ot3wZIF2o7-fKKxZ)
+[2025-12-03 23:14:53] INFO [face_recognition_app:967] - Set folder 1wRr6RFm0AYxlQWO_Ot3wZIF2o7-fKKxZ for event e91a6eef-6e8a-4076-9193-930dd9301a21 via link
+[2025-12-03 23:14:54] INFO [face_recognition_app:855] - Started background indexing task fc165942-b2ea-4feb-9cce-04ec5c24b3f3 for event e91a6eef-6e8a-4076-9193-930dd9301a21
+[2025-12-03 23:14:54] INFO [face_recognition_app:580] - Background Task fc165942-b2ea-4feb-9cce-04ec5c24b3f3: Starting Face Indexing for Event: Test
+[2025-12-03 23:14:54] INFO [face_recognition_app:598] - Task fc165942-b2ea-4feb-9cce-04ec5c24b3f3: Starting fresh indexing (no checkpoints found)
+[2025-12-03 23:14:55] INFO [face_recognition_app:615] - Task fc165942-b2ea-4feb-9cce-04ec5c24b3f3: Found 1 photos to process
+[2025-12-03 23:14:55] DEBUG [face_recognition_app:621] - Task fc165942-b2ea-4feb-9cce-04ec5c24b3f3: Processing batch 1 (1 photos)
+[2025-12-03 23:14:55] DEBUG [face_recognition_app:634] - Task fc165942-b2ea-4feb-9cce-04ec5c24b3f3: Processing 592131384_1704586957545020_5887388887039601685_n.jpg
+[2025-12-03 23:18:10] DEBUG [face_recognition_app:655] - Task fc165942-b2ea-4feb-9cce-04ec5c24b3f3: Found 3 faces in 592131384_1704586957545020_5887388887039601685_n.jpg
+[2025-12-03 23:18:10] INFO [face_recognition_app:1150] - Paused indexing for event e91a6eef-6e8a-4076-9193-930dd9301a21
+[2025-12-03 23:18:10] INFO [face_recognition_app:351] - Cleared checkpoints for event e91a6eef-6e8a-4076-9193-930dd9301a21
+[2025-12-03 23:18:10] INFO [face_recognition_app:698] - Task fc165942-b2ea-4feb-9cce-04ec5c24b3f3: Indexing completed successfully. Photos: 1, Faces: 3
+[2025-12-03 23:18:10] INFO [face_recognition_app:1150] - Paused indexing for event e91a6eef-6e8a-4076-9193-930dd9301a21
+[2025-12-03 23:18:37] INFO [face_recognition_app:855] - Started background indexing task da8cf7a4-697f-44e1-afc5-d19347b66826 for event e91a6eef-6e8a-4076-9193-930dd9301a21
+[2025-12-03 23:18:37] INFO [face_recognition_app:580] - Background Task da8cf7a4-697f-44e1-afc5-d19347b66826: Starting Face Indexing for Event: Test
+[2025-12-03 23:18:37] INFO [face_recognition_app:598] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Starting fresh indexing (no checkpoints found)
+[2025-12-03 23:18:38] INFO [face_recognition_app:615] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Found 1 photos to process
+[2025-12-03 23:18:38] DEBUG [face_recognition_app:621] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Processing batch 1 (1 photos)
+[2025-12-03 23:18:38] DEBUG [face_recognition_app:634] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Processing 592131384_1704586957545020_5887388887039601685_n.jpg
+[2025-12-03 23:22:08] DEBUG [face_recognition_app:655] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Found 3 faces in 592131384_1704586957545020_5887388887039601685_n.jpg
+[2025-12-03 23:22:08] INFO [face_recognition_app:351] - Cleared checkpoints for event e91a6eef-6e8a-4076-9193-930dd9301a21
+[2025-12-03 23:22:08] INFO [face_recognition_app:698] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Indexing completed successfully. Photos: 1, Faces: 3

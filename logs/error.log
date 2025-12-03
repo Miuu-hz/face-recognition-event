@@ -48,3 +48,12 @@ Traceback (most recent call last):
   File "C:\demo\Phopy\venv\lib\site-packages\google\oauth2\credentials.py", line 333, in refresh
     raise exceptions.RefreshError(
 google.auth.exceptions.RefreshError: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+[2025-12-03 15:20:38] ERROR [face_recognition_app:1023] - Error getting checkpoint status: no such table: indexing_checkpoints
+[2025-12-03 15:20:57] ERROR [face_recognition_app:1023] - Error getting checkpoint status: no such table: indexing_checkpoints
+[2025-12-03 15:21:02] ERROR [face_recognition_app:648] - Task 48a3b70b-1ae6-47e6-a5d3-1fda6488a8b2: Unexpected error: no such table: indexing_checkpoints
+Traceback (most recent call last):
+  File "C:\demo\Phopy\app.py", line 527, in run_indexing_background
+    processed_photos = get_checkpoints(db_conn, event_id)
+  File "C:\demo\Phopy\app.py", line 273, in get_checkpoints
+    cursor = db_conn.execute(
+sqlite3.OperationalError: no such table: indexing_checkpoints
