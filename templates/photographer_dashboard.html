@@ -820,6 +820,20 @@
                                         </a>
                                     {% elif event.indexing_status == 'Completed' %}
                                         <div class="status completed">✅ Indexing Complete!</div>
+
+                                        <!-- Check for new photos indicator -->
+                                        <div id="new-photos-indicator-{{ event.id }}" style="display: none; margin-top: 1rem;">
+                                            <div style="background: rgba(99, 102, 241, 0.2); border: 1px solid var(--accent-indigo); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem;">
+                                                <strong>📸 New Photos Detected!</strong>
+                                                <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
+                                                    <span id="new-photos-count-{{ event.id }}"></span> new photos found in Google Drive.
+                                                    Click below to index them.
+                                                </p>
+                                            </div>
+                                            <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">
+                                                🔄 Index New Photos
+                                            </a>
+                                        </div>
                                     {% elif event.indexing_status == 'Failed' %}
                                         <div class="status" style="background: rgba(239, 68, 68, 0.2); color: var(--error); border: 1px solid var(--error); margin-bottom: 1rem;">
                                             ⚠️ Indexing Failed
@@ -1221,6 +1235,27 @@
             }
         }
 
+        // Check for new photos in completed events
+        async function checkForNewPhotos(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/new_photos`);
+                const data = await response.json();
+
+                if (data.has_new && data.new_photos > 0) {
+                    // Show new photos indicator
+                    const indicator = document.getElementById(`new-photos-indicator-${eventId}`);
+                    const countSpan = document.getElementById(`new-photos-count-${eventId}`);
+
+                    if (indicator && countSpan) {
+                        indicator.style.display = 'block';
+                        countSpan.textContent = data.new_photos;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking for new photos:', error);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Check for in-progress tasks and update progress in real-time
             const statusDivs = document.querySelectorAll('[data-event-id]');
@@ -1242,6 +1277,23 @@
                 const eventId = button.id.replace('restart-btn-', '');
                 checkCheckpointForRestart(eventId);
             });
+
+            // Check for new photos in completed events
+            const newPhotoIndicators = document.querySelectorAll('[id^="new-photos-indicator-"]');
+            const completedEventIds = [];
+            newPhotoIndicators.forEach(indicator => {
+                const eventId = indicator.id.replace('new-photos-indicator-', '');
+                completedEventIds.push(eventId);
+                // Initial check
+                checkForNewPhotos(eventId);
+            });
+
+            // Auto-check for new photos every 30 seconds
+            if (completedEventIds.length > 0) {
+                setInterval(() => {
+                    completedEventIds.forEach(eventId => checkForNewPhotos(eventId));
+                }, 30000); // 30 seconds
+            }
         });
 
         // Check checkpoint for restart button (Failed status)

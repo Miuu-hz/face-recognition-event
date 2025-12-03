@@ -1154,6 +1154,71 @@ def pause_indexing(event_id):
         logger.error(f"Error pausing indexing: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/event/<event_id>/new_photos')
+def check_new_photos(event_id):
+    """Check if there are new photos in Google Drive folder that haven't been indexed"""
+    try:
+        event_id = validate_event_id(event_id)
+
+        if 'credentials' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        db = get_db()
+        event_data = db.execute('SELECT drive_folder_id, indexing_status FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if not event_data or not event_data['drive_folder_id']:
+            return jsonify({'error': 'Event or folder not found'}), 404
+
+        # Only check if indexing is completed or paused
+        if event_data['indexing_status'] not in ['Completed', 'Paused']:
+            return jsonify({'new_photos': 0, 'total_photos': 0})
+
+        # Build Google Drive service
+        credentials_dict = session['credentials']
+        creds = Credentials(**credentials_dict)
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Get all photos from Drive
+        folder_id = event_data['drive_folder_id']
+        query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
+        results = drive_service.files().list(
+            q=query,
+            fields="files(id, name)",
+            pageSize=1000
+        ).execute()
+        drive_photos = results.get('files', [])
+
+        # Get indexed photo IDs from database
+        indexed_photos = db.execute(
+            'SELECT DISTINCT photo_id FROM faces WHERE event_id = ?',
+            (event_id,)
+        ).fetchall()
+        indexed_ids = {row['photo_id'] for row in indexed_photos}
+
+        # Also check checkpoints
+        checkpoints = db.execute(
+            'SELECT DISTINCT photo_id FROM indexing_checkpoints WHERE event_id = ?',
+            (event_id,)
+        ).fetchall()
+        checkpoint_ids = {row['photo_id'] for row in checkpoints}
+
+        # Combine indexed and checkpoint IDs
+        processed_ids = indexed_ids | checkpoint_ids
+
+        # Find new photos
+        new_photos = [photo for photo in drive_photos if photo['id'] not in processed_ids]
+
+        return jsonify({
+            'new_photos': len(new_photos),
+            'total_photos': len(drive_photos),
+            'indexed_photos': len(processed_ids),
+            'has_new': len(new_photos) > 0
+        })
+
+    except Exception as e:
+        logger.error(f"Error checking new photos: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/event/<event_id>')
 def event_page(event_id):
     db = get_db()
