@@ -1125,6 +1125,35 @@ def reset_event(event_id):
         logger.error(f"Error resetting event: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/pause_indexing/<event_id>', methods=['POST'])
+def pause_indexing(event_id):
+    """Pause ongoing indexing task"""
+    try:
+        event_id = validate_event_id(event_id)
+        db = get_db()
+
+        event_data = db.execute('SELECT task_id FROM events WHERE id = ?', (event_id,)).fetchone()
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Mark task as failed to stop it
+        task_id = event_data['task_id']
+        if task_id:
+            task = get_task(task_id)
+            if task:
+                task.fail("Paused by user")
+
+        # Change status to Paused (keep checkpoint data)
+        db.execute("UPDATE events SET indexing_status = 'Paused' WHERE id = ?", (event_id,))
+        db.commit()
+
+        logger.info(f"Paused indexing for event {event_id}")
+        return redirect(url_for('photographer_dashboard'))
+
+    except Exception as e:
+        logger.error(f"Error pausing indexing: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/event/<event_id>')
 def event_page(event_id):
     db = get_db()

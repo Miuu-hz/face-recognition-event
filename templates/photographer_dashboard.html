@@ -759,23 +759,65 @@
                                             <span id="start-text-{{ event.id }}">Start Face Indexing</span>
                                         </a>
                                     {% elif event.indexing_status == 'In Progress' %}
-                                        <div class="status in-progress" id="status-{{ event.id }}" data-event-id="{{ event.id }}">
-                                            <span class="loading"></span>⏳ Indexing in progress...
-                                        </div>
-                                        <!-- Show reset button if stuck (will be shown by JS) -->
-                                        <div id="stuck-indicator-{{ event.id }}" style="display: none; margin-top: 1rem;">
-                                            <div style="background: rgba(251, 191, 36, 0.2); border: 1px solid var(--warning); border-radius: 0.5rem; padding: 0.75rem; color: var(--warning); margin-bottom: 0.75rem;">
-                                                <strong>⚠️ Task Not Responding</strong>
-                                                <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
-                                                    The indexing task appears to be stuck or was interrupted. Click below to reset and restart.
-                                                </p>
+                                        <div id="status-{{ event.id }}" data-event-id="{{ event.id }}">
+                                            <div class="status in-progress" style="margin-bottom: 1rem;">
+                                                <span class="loading"></span>⏳ Indexing in progress...
                                             </div>
-                                            <form action="{{ url_for('reset_event', event_id=event.id) }}" method="post" style="display: inline;">
+
+                                            <!-- Progress Info -->
+                                            <div style="margin-bottom: 1rem;">
+                                                <div class="progress-container">
+                                                    <div class="progress-bar" style="width: {% if event.indexed_photos and event.indexed_photos > 0 %}{{ (event.indexed_photos / (event.indexed_photos + 1)) * 100 }}{% else %}0{% endif %}%" id="progress-bar-{{ event.id }}">
+                                                        <span id="progress-text-{{ event.id }}">{{ event.indexed_photos or 0 }} photos</span>
+                                                    </div>
+                                                </div>
+                                                <div class="progress-info">
+                                                    <div class="progress-stats">
+                                                        <div class="stat-item">
+                                                            <strong>📸</strong> <span id="photos-count-{{ event.id }}">{{ event.indexed_photos or 0 }}</span> photos
+                                                        </div>
+                                                        <div class="stat-item">
+                                                            <strong>👤</strong> <span id="faces-count-{{ event.id }}">{{ event.total_faces or 0 }}</span> faces
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Pause Button -->
+                                            <form action="{{ url_for('pause_indexing', event_id=event.id) }}" method="post" style="display: inline;">
                                                 <button type="submit" class="btn btn-secondary">
-                                                    🔄 Reset & Restart
+                                                    ⏸️ Pause Indexing
                                                 </button>
                                             </form>
                                         </div>
+                                    {% elif event.indexing_status == 'Paused' %}
+                                        <div class="status" style="background: rgba(251, 191, 36, 0.2); color: var(--warning); border: 1px solid var(--warning); margin-bottom: 1rem;">
+                                            ⏸️ Indexing Paused
+                                        </div>
+
+                                        <!-- Show Progress -->
+                                        <div style="margin-bottom: 1rem;">
+                                            <div class="progress-container">
+                                                <div class="progress-bar" style="width: {% if event.indexed_photos and event.indexed_photos > 0 %}{{ (event.indexed_photos / (event.indexed_photos + 1)) * 100 }}{% else %}0{% endif %}%">
+                                                    {{ event.indexed_photos or 0 }} photos
+                                                </div>
+                                            </div>
+                                            <div class="progress-info">
+                                                <div class="progress-stats">
+                                                    <div class="stat-item">
+                                                        <strong>📸</strong> {{ event.indexed_photos or 0 }} photos processed
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <strong>👤</strong> {{ event.total_faces or 0 }} faces found
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Resume Button -->
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">
+                                            ▶️ Resume Indexing
+                                        </a>
                                     {% elif event.indexing_status == 'Completed' %}
                                         <div class="status completed">✅ Indexing Complete!</div>
                                     {% elif event.indexing_status == 'Failed' %}
@@ -1080,56 +1122,44 @@
 
         // Update UI with task data
         function updateTaskUI(eventId, task) {
-            const statusDiv = document.getElementById(`status-${eventId}`);
-            if (!statusDiv) return;
-
             if (task.status === 'running') {
-                // Update progress with visual bar
-                const progressPercent = task.progress_percent || 0;
-                const currentItem = task.current_item || 'Processing...';
-                const facesFound = task.faces_found || 0;
-                const eta = task.eta_seconds ? formatTime(task.eta_seconds) : 'Calculating...';
+                // Update progress bar
+                const progressBar = document.getElementById(`progress-bar-${eventId}`);
+                const progressText = document.getElementById(`progress-text-${eventId}`);
+                const photosCount = document.getElementById(`photos-count-${eventId}`);
+                const facesCount = document.getElementById(`faces-count-${eventId}`);
 
-                statusDiv.innerHTML = `
-                    <div style="font-weight: bold; margin-bottom: 0.5rem;">⏳ Indexing in progress...</div>
+                if (progressBar && task.progress_percent) {
+                    progressBar.style.width = task.progress_percent + '%';
+                }
 
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: ${progressPercent}%">
-                            ${progressPercent}%
-                        </div>
-                    </div>
+                if (progressText) {
+                    progressText.textContent = `${task.progress || 0} photos`;
+                }
 
-                    <div class="progress-info">
-                        <div class="progress-stats">
-                            <div class="stat-item">
-                                <strong>📸</strong> ${task.progress}/${task.total} photos
-                            </div>
-                            <div class="stat-item">
-                                <strong>👤</strong> ${facesFound} faces found
-                            </div>
-                            <div class="stat-item">
-                                <strong>⏱️</strong> ETA: ${eta}
-                            </div>
-                        </div>
-                    </div>
+                if (photosCount) {
+                    photosCount.textContent = task.progress || 0;
+                }
 
-                    <div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.8;">
-                        <strong>Current:</strong> ${currentItem}
-                    </div>
-                `;
+                if (facesCount) {
+                    facesCount.textContent = task.faces_found || 0;
+                }
             } else if (task.status === 'completed') {
                 // Show success toast
                 showToast(`Indexing completed! Found ${task.faces_found || 0} faces in ${task.total} photos.`, 'success');
                 // Reload page to show updated status
                 setTimeout(() => location.reload(), 1000);
             } else if (task.status === 'failed') {
-                // Show error toast
-                showToast(`Indexing failed: ${task.error || 'Unknown error'}`, 'error', 8000);
-                // Show error in status div
-                statusDiv.className = 'status';
-                statusDiv.style.backgroundColor = '#f8d7da';
-                statusDiv.style.color = '#721c24';
-                statusDiv.innerHTML = `⚠️ Indexing Failed<br><small style="font-weight: normal;">${task.error || 'Unknown error'}</small>`;
+                // Check if it was paused
+                if (task.error && task.error.includes('Paused')) {
+                    // Reload to show paused state
+                    location.reload();
+                } else {
+                    // Show error toast
+                    showToast(`Indexing failed: ${task.error || 'Unknown error'}`, 'error', 8000);
+                    // Reload to show failed state
+                    setTimeout(() => location.reload(), 1000);
+                }
             }
         }
 
@@ -1191,42 +1221,12 @@
             }
         }
 
-        // Check if event is stuck (In Progress but no active task)
-        async function checkIfStuck(eventId) {
-            try {
-                const response = await fetch(`/api/event/${eventId}/checkpoint/status`);
-                const data = await response.json();
-
-                if (data.is_stuck) {
-                    // Show stuck indicator and reset button
-                    const stuckIndicator = document.getElementById(`stuck-indicator-${eventId}`);
-                    const statusDiv = document.getElementById(`status-${eventId}`);
-
-                    if (stuckIndicator) {
-                        stuckIndicator.style.display = 'block';
-                    }
-
-                    // Hide loading spinner
-                    if (statusDiv) {
-                        statusDiv.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking if stuck:', error);
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            // Check for in-progress tasks
-            const statusDivs = document.querySelectorAll('.status.in-progress[data-event-id]');
+            // Check for in-progress tasks and update progress in real-time
+            const statusDivs = document.querySelectorAll('[data-event-id]');
             statusDivs.forEach(div => {
                 const eventId = div.getAttribute('data-event-id');
-
-                // Try to connect to SSE stream
                 connectTaskStream(eventId);
-
-                // Also check if stuck after 2 seconds
-                setTimeout(() => checkIfStuck(eventId), 2000);
             });
 
             // Check checkpoint status for events with "Not Started" status
