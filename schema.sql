@@ -10,6 +10,7 @@ CREATE TABLE events (
     link TEXT NOT NULL,
     qr_path TEXT NOT NULL,
     drive_folder_id TEXT,
+    drive_page_token TEXT,
     indexing_status TEXT DEFAULT 'Not Started',
     indexed_photos INTEGER DEFAULT 0,
     total_faces INTEGER DEFAULT 0,

@@ -1154,9 +1154,26 @@ def pause_indexing(event_id):
         logger.error(f"Error pausing indexing: {e}")
         return jsonify({'error': str(e)}), 500
 
+def ensure_drive_token_column(db_conn):
+    """Ensure drive_page_token column exists in events table"""
+    try:
+        cursor = db_conn.execute("PRAGMA table_info(events)")
+        columns = [column[1] for column in cursor.fetchall()]
+
+        if 'drive_page_token' not in columns:
+            logger.info("Adding drive_page_token column to events table (auto-migration)...")
+            db_conn.execute("ALTER TABLE events ADD COLUMN drive_page_token TEXT")
+            db_conn.commit()
+            logger.info("✅ Successfully added drive_page_token column")
+            return True
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error ensuring drive_page_token column: {e}")
+        return False
+
 @app.route('/api/event/<event_id>/new_photos')
 def check_new_photos(event_id):
-    """Check if there are new photos in Google Drive folder that haven't been indexed"""
+    """Check for new photos using Google Drive Changes API (much faster!)"""
     try:
         event_id = validate_event_id(event_id)
 
@@ -1164,7 +1181,14 @@ def check_new_photos(event_id):
             return jsonify({'error': 'Not authenticated'}), 401
 
         db = get_db()
-        event_data = db.execute('SELECT drive_folder_id, indexing_status FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        # Ensure column exists
+        ensure_drive_token_column(db)
+
+        event_data = db.execute(
+            'SELECT drive_folder_id, drive_page_token, indexing_status FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
 
         if not event_data or not event_data['drive_folder_id']:
             return jsonify({'error': 'Event or folder not found'}), 404
@@ -1178,15 +1202,8 @@ def check_new_photos(event_id):
         creds = Credentials(**credentials_dict)
         drive_service = build('drive', 'v3', credentials=creds)
 
-        # Get all photos from Drive
         folder_id = event_data['drive_folder_id']
-        query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
-        results = drive_service.files().list(
-            q=query,
-            fields="files(id, name)",
-            pageSize=1000
-        ).execute()
-        drive_photos = results.get('files', [])
+        page_token = event_data['drive_page_token']
 
         # Get indexed photo IDs from database
         indexed_photos = db.execute(
@@ -1202,21 +1219,113 @@ def check_new_photos(event_id):
         ).fetchall()
         checkpoint_ids = {row['photo_id'] for row in checkpoints}
 
-        # Combine indexed and checkpoint IDs
         processed_ids = indexed_ids | checkpoint_ids
 
-        # Find new photos
-        new_photos = [photo for photo in drive_photos if photo['id'] not in processed_ids]
+        # If no page token, initialize with current state
+        if not page_token:
+            logger.info(f"Initializing Drive Changes API for event {event_id}")
+            # Get start page token for this folder
+            response = drive_service.changes().getStartPageToken().execute()
+            new_page_token = response.get('startPageToken')
+
+            # Save token
+            db.execute(
+                'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                (new_page_token, event_id)
+            )
+            db.commit()
+
+            # First time: do full check
+            query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
+            results = drive_service.files().list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=1000
+            ).execute()
+            drive_photos = results.get('files', [])
+            new_photos = [photo for photo in drive_photos if photo['id'] not in processed_ids]
+
+            return jsonify({
+                'new_photos': len(new_photos),
+                'total_photos': len(drive_photos),
+                'indexed_photos': len(processed_ids),
+                'has_new': len(new_photos) > 0
+            })
+
+        # Use Changes API to get only changed files
+        logger.debug(f"Checking Drive changes for event {event_id} with token {page_token}")
+
+        new_photo_ids = set()
+        new_page_token = page_token
+
+        while True:
+            try:
+                response = drive_service.changes().list(
+                    pageToken=new_page_token,
+                    spaces='drive',
+                    fields='nextPageToken, newStartPageToken, changes(fileId, file(id, name, mimeType, parents, trashed))',
+                    includeRemoved=True
+                ).execute()
+
+                changes = response.get('changes', [])
+
+                # Filter for new images in our folder
+                for change in changes:
+                    file_info = change.get('file')
+                    if not file_info:
+                        continue
+
+                    # Check if it's an image in our folder
+                    if (file_info.get('mimeType') in ['image/jpeg', 'image/png', 'image/jpg'] and
+                        folder_id in file_info.get('parents', []) and
+                        not file_info.get('trashed', False)):
+
+                        file_id = file_info['id']
+                        # Check if not already processed
+                        if file_id not in processed_ids:
+                            new_photo_ids.add(file_id)
+
+                # Update token
+                if 'newStartPageToken' in response:
+                    new_page_token = response['newStartPageToken']
+                    break
+
+                new_page_token = response.get('nextPageToken')
+                if not new_page_token:
+                    break
+
+            except HttpError as e:
+                if e.resp.status == 400:
+                    # Token expired or invalid, reinitialize
+                    logger.warning(f"Page token invalid for event {event_id}, reinitializing...")
+                    response = drive_service.changes().getStartPageToken().execute()
+                    new_page_token = response.get('startPageToken')
+                    db.execute(
+                        'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                        (new_page_token, event_id)
+                    )
+                    db.commit()
+                    return jsonify({'new_photos': 0, 'total_photos': len(processed_ids), 'has_new': False})
+                raise
+
+        # Save new token
+        if new_page_token != page_token:
+            db.execute(
+                'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                (new_page_token, event_id)
+            )
+            db.commit()
+            logger.debug(f"Updated page token for event {event_id}")
 
         return jsonify({
-            'new_photos': len(new_photos),
-            'total_photos': len(drive_photos),
+            'new_photos': len(new_photo_ids),
+            'total_photos': len(processed_ids) + len(new_photo_ids),
             'indexed_photos': len(processed_ids),
-            'has_new': len(new_photos) > 0
+            'has_new': len(new_photo_ids) > 0
         })
 
     except Exception as e:
-        logger.error(f"Error checking new photos: {e}")
+        logger.error(f"Error checking new photos: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/event/<event_id>')
