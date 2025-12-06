@@ -766,6 +766,189 @@ def create_average_encoding(encodings):
     else:
         return np.mean(encodings, axis=0)
 
+# --- Auto-Indexing Configuration ---
+AUTO_INDEX_CONFIG = {
+    'default_interval_minutes': int(os.getenv('AUTO_INDEX_INTERVAL', '2')),  # Check every 2 minutes by default
+    'min_interval_seconds': 30,  # Minimum 30 seconds between checks
+}
+
+# Store for auto-index threads
+auto_index_threads = {}
+auto_index_threads_lock = threading.Lock()
+
+def auto_index_new_photos(event_id, folder_id, credentials_dict, interval_minutes):
+    """Background thread that automatically indexes new photos (INCREMENTAL ONLY!)"""
+    import time
+
+    db_conn = sqlite3.connect(DATABASE)
+    db_conn.row_factory = sqlite3.Row
+
+    logger.info(f"[AUTO-INDEX] Started for event {event_id} (interval: {interval_minutes} min)")
+
+    while True:
+        try:
+            # Check if auto-indexing is still enabled
+            event_data = db_conn.execute(
+                'SELECT auto_index_enabled, drive_page_token FROM events WHERE id = ?',
+                (event_id,)
+            ).fetchone()
+
+            if not event_data or not event_data['auto_index_enabled']:
+                logger.info(f"[AUTO-INDEX] Disabled for event {event_id}, stopping")
+                break
+
+            # Build Google Drive service
+            creds = Credentials(**credentials_dict)
+            drive_service = build('drive', 'v3', credentials=creds)
+
+            page_token = event_data['drive_page_token']
+
+            # Get already indexed photo IDs
+            indexed_photos = db_conn.execute(
+                'SELECT DISTINCT photo_id FROM faces WHERE event_id = ?',
+                (event_id,)
+            ).fetchall()
+            indexed_ids = {row['photo_id'] for row in indexed_photos}
+
+            # If no page token, initialize
+            if not page_token:
+                logger.info(f"[AUTO-INDEX] Initializing page token for event {event_id}")
+                response = drive_service.changes().getStartPageToken().execute()
+                page_token = response.get('startPageToken')
+                db_conn.execute(
+                    'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                    (page_token, event_id)
+                )
+                db_conn.commit()
+                logger.info(f"[AUTO-INDEX] No new photos to index (first run)")
+            else:
+                # Check for new photos using Changes API
+                new_photos = []
+                new_page_token = page_token
+
+                while True:
+                    response = drive_service.changes().list(
+                        pageToken=new_page_token,
+                        spaces='drive',
+                        fields='nextPageToken, newStartPageToken, changes(fileId, file(id, name, mimeType, parents, trashed))',
+                        includeRemoved=True
+                    ).execute()
+
+                    changes = response.get('changes', [])
+
+                    # Filter for new images in our folder
+                    for change in changes:
+                        file_info = change.get('file')
+                        if not file_info:
+                            continue
+
+                        parents = file_info.get('parents', [])
+                        mime_type = file_info.get('mimeType', '')
+                        is_trashed = file_info.get('trashed', False)
+
+                        if (folder_id in parents and
+                            mime_type in ['image/jpeg', 'image/png', 'image/jpg'] and
+                            not is_trashed and
+                            file_info['id'] not in indexed_ids):
+
+                            new_photos.append({
+                                'id': file_info['id'],
+                                'name': file_info['name']
+                            })
+
+                    # Update page token
+                    new_page_token = response.get('nextPageToken') or response.get('newStartPageToken')
+
+                    if not response.get('nextPageToken'):
+                        break
+
+                # Save new page token
+                if new_page_token and new_page_token != page_token:
+                    db_conn.execute(
+                        'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                        (new_page_token, event_id)
+                    )
+                    db_conn.commit()
+
+                # Index new photos (INCREMENTAL!)
+                if new_photos:
+                    logger.info(f"[AUTO-INDEX] Found {len(new_photos)} new photo(s) for event {event_id}")
+
+                    photos_indexed = 0
+                    faces_found = 0
+                    temp_files = []
+
+                    for photo in new_photos:
+                        photo_id = photo['id']
+                        photo_name = photo['name']
+
+                        try:
+                            # Download photo
+                            temp_file = download_drive_image(drive_service, photo_id)
+                            if not temp_file:
+                                continue
+
+                            temp_files.append(temp_file)
+
+                            # Extract faces with GPU
+                            faces = extract_face_encodings(temp_file)
+
+                            # Save to database
+                            for face in faces:
+                                encoding_blob = face['encoding'].tobytes()
+                                db_conn.execute('''
+                                    INSERT INTO faces (event_id, photo_id, photo_name, face_encoding)
+                                    VALUES (?, ?, ?, ?)
+                                ''', (event_id, photo_id, photo_name, encoding_blob))
+
+                            db_conn.commit()
+
+                            photos_indexed += 1
+                            faces_found += len(faces)
+
+                            logger.info(f"[AUTO-INDEX] Indexed {photo_name}: {len(faces)} face(s)")
+
+                        except Exception as e:
+                            logger.error(f"[AUTO-INDEX] Error indexing {photo_name}: {e}")
+                            continue
+                        finally:
+                            # Cleanup temp files
+                            for tf in temp_files:
+                                try:
+                                    os.remove(tf)
+                                except:
+                                    pass
+                            temp_files = []
+
+                    # Invalidate cache
+                    invalidate_cache(event_id)
+
+                    # Update last auto-index time
+                    db_conn.execute(
+                        'UPDATE events SET last_auto_index_at = CURRENT_TIMESTAMP WHERE id = ?',
+                        (event_id,)
+                    )
+                    db_conn.commit()
+
+                    logger.info(f"[AUTO-INDEX] Completed: {photos_indexed} photos, {faces_found} faces")
+                else:
+                    logger.debug(f"[AUTO-INDEX] No new photos for event {event_id}")
+
+        except Exception as e:
+            logger.error(f"[AUTO-INDEX] Error for event {event_id}: {e}")
+
+        # Sleep for configured interval
+        sleep_seconds = max(interval_minutes * 60, AUTO_INDEX_CONFIG['min_interval_seconds'])
+        time.sleep(sleep_seconds)
+
+    # Cleanup when stopped
+    with auto_index_threads_lock:
+        if event_id in auto_index_threads:
+            del auto_index_threads[event_id]
+
+    logger.info(f"[AUTO-INDEX] Stopped for event {event_id}")
+    db_conn.close()
+
 def run_indexing_background(task, event_id, folder_id, credentials_dict):
     """Run face indexing in background thread"""
     # Create new database connection for this thread
@@ -1552,6 +1735,133 @@ def check_new_photos(event_id):
 
     except Exception as e:
         logger.error(f"Error checking new photos: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/event/<event_id>/auto-index/enable', methods=['POST'])
+def enable_auto_index(event_id):
+    """Enable auto-indexing for new photos (INCREMENTAL ONLY!)"""
+    try:
+        event_id = validate_event_id(event_id)
+
+        if 'credentials' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        db = get_db()
+
+        # Ensure column exists
+        ensure_drive_token_column(db)
+
+        event_data = db.execute(
+            'SELECT drive_folder_id, indexing_status, auto_index_enabled FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
+
+        if not event_data or not event_data['drive_folder_id']:
+            return jsonify({'error': 'Event or folder not found'}), 404
+
+        # Only enable if indexing is completed
+        if event_data['indexing_status'] != 'Completed':
+            return jsonify({'error': 'Please complete initial indexing first'}), 400
+
+        # Check if already enabled
+        if event_data['auto_index_enabled']:
+            return jsonify({'message': 'Auto-indexing already enabled', 'status': 'running'})
+
+        # Get interval from request or use default
+        data = request.get_json() or {}
+        interval_minutes = data.get('interval_minutes', AUTO_INDEX_CONFIG['default_interval_minutes'])
+
+        # Enable auto-indexing
+        db.execute(
+            'UPDATE events SET auto_index_enabled = 1 WHERE id = ?',
+            (event_id,)
+        )
+        db.commit()
+
+        # Start background thread
+        with auto_index_threads_lock:
+            if event_id not in auto_index_threads:
+                credentials_dict = session['credentials']
+                folder_id = event_data['drive_folder_id']
+
+                thread = threading.Thread(
+                    target=auto_index_new_photos,
+                    args=(event_id, folder_id, credentials_dict, interval_minutes),
+                    daemon=True
+                )
+                thread.start()
+                auto_index_threads[event_id] = thread
+
+                logger.info(f"[AUTO-INDEX] Enabled for event {event_id}")
+
+        return jsonify({
+            'message': 'Auto-indexing enabled',
+            'interval_minutes': interval_minutes,
+            'status': 'running'
+        })
+
+    except Exception as e:
+        logger.error(f"Error enabling auto-index: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/event/<event_id>/auto-index/disable', methods=['POST'])
+def disable_auto_index(event_id):
+    """Disable auto-indexing"""
+    try:
+        event_id = validate_event_id(event_id)
+
+        db = get_db()
+
+        # Disable in database
+        db.execute(
+            'UPDATE events SET auto_index_enabled = 0 WHERE id = ?',
+            (event_id,)
+        )
+        db.commit()
+
+        logger.info(f"[AUTO-INDEX] Disabled for event {event_id}")
+
+        return jsonify({
+            'message': 'Auto-indexing disabled',
+            'status': 'stopped'
+        })
+
+    except Exception as e:
+        logger.error(f"Error disabling auto-index: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/event/<event_id>/auto-index/status')
+def auto_index_status(event_id):
+    """Get auto-indexing status"""
+    try:
+        event_id = validate_event_id(event_id)
+
+        db = get_db()
+
+        # Ensure column exists
+        ensure_drive_token_column(db)
+
+        event_data = db.execute(
+            'SELECT auto_index_enabled, last_auto_index_at FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
+
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Check if thread is running
+        with auto_index_threads_lock:
+            is_running = event_id in auto_index_threads and auto_index_threads[event_id].is_alive()
+
+        return jsonify({
+            'enabled': bool(event_data['auto_index_enabled']),
+            'running': is_running,
+            'last_index_at': event_data['last_auto_index_at'],
+            'interval_minutes': AUTO_INDEX_CONFIG['default_interval_minutes']
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting auto-index status: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/event/<event_id>')
