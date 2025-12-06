@@ -863,17 +863,45 @@ def download_image_temp(drive_service, photo_id):
 def extract_face_encodings_gpu(image_path):
     """ใช้ dlib โดยตรงกับ GPU สำหรับ face detection และ encoding (เร็วกว่ามาก!)"""
     try:
+        import time
+        load_start = time.time()
+
         # โหลดรูป
         img = dlib.load_rgb_image(image_path)
+        original_height, original_width = img.shape[:2]
 
-        logger.info("Using dlib CNN detector with GPU for face detection")
+        logger.info(f"[GPU] Loaded image: {original_width}x{original_height} pixels")
+
+        # OPTIMIZATION: Resize รูปถ้าใหญ่เกินไป (ลดภาระ GPU)
+        # รูปที่ใหญ่กว่า 1920x1080 จะถูก resize ลงเพื่อความเร็ว
+        MAX_DIMENSION = 1920
+        if original_width > MAX_DIMENSION or original_height > MAX_DIMENSION:
+            scale = MAX_DIMENSION / max(original_width, original_height)
+            new_width = int(original_width * scale)
+            new_height = int(original_height * scale)
+
+            # Resize ด้วย PIL (เร็วกว่า)
+            from PIL import Image as PILImage
+            pil_img = PILImage.fromarray(img)
+            pil_img = pil_img.resize((new_width, new_height), PILImage.LANCZOS)
+            img = np.array(pil_img)
+
+            logger.info(f"[GPU] Resized to: {new_width}x{new_height} pixels (scale: {scale:.2f}x)")
+
+        logger.info(f"[GPU] Image loading took: {time.time() - load_start:.2f}s")
+        logger.info("[GPU] Using dlib CNN detector with GPU for face detection")
 
         # ใช้ CNN detector บน GPU
-        # upsample=1 หมายถึงขยายรูป 1 เท่า (สามารถปรับได้ถ้าต้องการหาใบหน้าเล็กๆ)
-        detections = dlib_cnn_detector(img, 1)
+        # upsample=0 เพื่อความเร็ว (ถ้าต้องการหาใบหน้าเล็กๆ ใช้ upsample=1)
+        detect_start = time.time()
+        detections = dlib_cnn_detector(img, 0)
+        logger.info(f"[GPU] CNN detection took: {time.time() - detect_start:.2f}s")
+        logger.info(f"[GPU] Found {len(detections)} face(s)")
 
+        # Encode faces
+        encoding_start = time.time()
         results = []
-        for detection in detections:
+        for i, detection in enumerate(detections):
             # ได้ bounding box จาก CNN detector
             rect = detection.rect
 
@@ -894,7 +922,8 @@ def extract_face_encodings_gpu(image_path):
                 }
             })
 
-        logger.debug(f"Found {len(results)} face(s) using GPU")
+        logger.info(f"[GPU] Face encoding took: {time.time() - encoding_start:.2f}s")
+        logger.info(f"[GPU] TOTAL GPU processing: {time.time() - load_start:.2f}s")
         return results
 
     except Exception as e:
