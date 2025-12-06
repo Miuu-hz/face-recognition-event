@@ -33,6 +33,7 @@ CREATE TABLE faces (
 -- Indexes for performance
 CREATE INDEX idx_faces_event ON faces(event_id);
 CREATE INDEX idx_faces_photo ON faces(photo_id);
+CREATE INDEX idx_faces_event_indexed ON faces(event_id, indexed_at);  -- Composite index for ordered queries
 
 -- Indexing checkpoints for resume functionality
 CREATE TABLE indexing_checkpoints (

@@ -254,6 +254,65 @@ FACE_RECOGNITION_CONFIG = {
     'num_jitters': int(os.getenv('NUM_JITTERS', '1')),
 }
 
+# --- In-Memory Encoding Cache ---
+# Cache structure: {event_id: {'encodings': np.array, 'photo_ids': list, 'photo_names': list, 'timestamp': datetime}}
+encoding_cache = {}
+cache_lock = threading.Lock()  # Thread-safe cache access
+
+def get_cached_encodings(event_id):
+    """Get encodings from cache or database"""
+    with cache_lock:
+        if event_id in encoding_cache:
+            logger.debug(f"Cache HIT for event {event_id}")
+            return encoding_cache[event_id]
+
+    logger.debug(f"Cache MISS for event {event_id}, loading from database...")
+
+    # Load from database
+    db = get_db()
+    cursor = db.execute(
+        'SELECT photo_id, photo_name, face_encoding FROM faces WHERE event_id = ? ORDER BY indexed_at',
+        (event_id,)
+    )
+    rows = cursor.fetchall()
+
+    if not rows:
+        return None
+
+    # Convert to arrays
+    photo_ids = []
+    photo_names = []
+    stored_encodings = []
+
+    for row in rows:
+        photo_ids.append(row['photo_id'])
+        photo_names.append(row['photo_name'])
+        stored_encodings.append(np.frombuffer(row['face_encoding'], dtype=np.float64))
+
+    # Stack into 2D array
+    stored_encodings = np.array(stored_encodings)
+
+    # Cache it
+    cache_data = {
+        'encodings': stored_encodings,
+        'photo_ids': photo_ids,
+        'photo_names': photo_names,
+        'timestamp': datetime.now()
+    }
+
+    with cache_lock:
+        encoding_cache[event_id] = cache_data
+        logger.info(f"Cached {len(photo_ids)} encodings for event {event_id}")
+
+    return cache_data
+
+def invalidate_cache(event_id):
+    """Invalidate cache when event is re-indexed"""
+    with cache_lock:
+        if event_id in encoding_cache:
+            del encoding_cache[event_id]
+            logger.info(f"Cache invalidated for event {event_id}")
+
 # Print configuration on startup
 def print_config():
     """Print face recognition configuration"""
@@ -694,6 +753,9 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
             # Clear checkpoints on successful completion
             clear_checkpoints(db_conn, event_id)
 
+            # Invalidate cache so next search will use fresh data
+            invalidate_cache(event_id)
+
             task.complete()
             logger.info(f"Task {task.id}: Indexing completed successfully. Photos: {indexed_photos}, Faces: {total_faces}")
 
@@ -836,6 +898,9 @@ def start_indexing(event_id):
 
         # Create background task
         task = create_task('face_indexing')
+
+        # Invalidate cache before starting new indexing
+        invalidate_cache(event_id)
 
         # Update status to In Progress and save task_id
         db.execute(
@@ -1441,43 +1506,45 @@ def search_faces(event_id):
             search_encoding = create_average_encoding(uploaded_encodings)
             logger.info(f"Created average encoding from {len(uploaded_encodings)} face(s) for event {event_id}")
 
-            # Search in database
-            db = get_db()
-            cursor = db.execute(
-                'SELECT photo_id, photo_name, face_encoding FROM faces WHERE event_id = ?',
-                (event_id,)
-            )
+            # Search in database - OPTIMIZED with cache + vectorized comparison
+            cache_data = get_cached_encodings(event_id)
 
-            matching_photos = {}  # Use dict to avoid duplicates
-            faces_checked = 0
+            if not cache_data:
+                logger.info(f"No faces found for event {event_id}")
+                matching_photos = {}
+                faces_checked = 0
+            else:
+                # Get data from cache (already in optimal format!)
+                stored_encodings = cache_data['encodings']
+                photo_ids = cache_data['photo_ids']
+                photo_names = cache_data['photo_names']
+                faces_checked = len(photo_ids)
 
-            for row in cursor:
-                photo_id = row['photo_id']
-                photo_name = row['photo_name']
+                # Vectorized distance calculation (10-50x faster than loop!)
+                distances = face_recognition.face_distance(stored_encodings, search_encoding)
 
-                # Convert blob back to numpy array
-                stored_encoding = np.frombuffer(row['face_encoding'], dtype=np.float64)
+                # Find matches
+                matching_photos = {}
+                tolerance = FACE_RECOGNITION_CONFIG['tolerance']
 
-                # Calculate face distance
-                distance = face_recognition.face_distance([stored_encoding], search_encoding)[0]
+                for idx, distance in enumerate(distances):
+                    if distance <= tolerance:
+                        photo_id = photo_ids[idx]
+                        photo_name = photo_names[idx]
 
-                # Check if match (lower distance = better match)
-                if distance <= FACE_RECOGNITION_CONFIG['tolerance']:
-                    if photo_id not in matching_photos:
-                        matching_photos[photo_id] = {
-                            'name': photo_name,
-                            'distance': distance
-                        }
-                    else:
-                        # Keep the best match for each photo
-                        if distance < matching_photos[photo_id]['distance']:
-                            matching_photos[photo_id]['distance'] = distance
+                        # Keep best match for each photo
+                        if photo_id not in matching_photos:
+                            matching_photos[photo_id] = {
+                                'name': photo_name,
+                                'distance': float(distance)
+                            }
+                        else:
+                            if distance < matching_photos[photo_id]['distance']:
+                                matching_photos[photo_id]['distance'] = float(distance)
 
-                    logger.debug(f"Match found: {photo_name} (distance: {distance:.3f})")
+                        logger.debug(f"Match found: {photo_name} (distance: {distance:.3f})")
 
-                faces_checked += 1
-
-            logger.info(f"Search completed for event {event_id}: Checked {faces_checked} faces, found {len(matching_photos)} matching photos")
+            logger.info(f"Search completed for event {event_id}: Checked {faces_checked} faces, found {len(matching_photos)} matching photos (cached + vectorized)")
 
             # Convert to Google Drive links
             photo_links = []
