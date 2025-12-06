@@ -7,6 +7,7 @@ import io
 import json
 import numpy as np
 import face_recognition
+import dlib
 import tempfile
 import threading
 import logging
@@ -14,6 +15,8 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from PIL import Image
 from dotenv import load_dotenv
+import urllib.request
+import bz2
 
 from flask import Flask, redirect, request, session, url_for, render_template, jsonify, g
 from google.oauth2.credentials import Credentials
@@ -250,6 +253,88 @@ def detect_gpu():
         return False
 
 has_gpu = detect_gpu()
+
+# --- dlib Model Files Setup ---
+MODELS_DIR = os.path.join(os.path.dirname(__file__), 'models')
+os.makedirs(MODELS_DIR, exist_ok=True)
+
+DLIB_MODELS = {
+    'cnn_face_detector': {
+        'filename': 'mmod_human_face_detector.dat',
+        'url': 'http://dlib.net/files/mmod_human_face_detector.dat.bz2'
+    },
+    'shape_predictor': {
+        'filename': 'shape_predictor_5_face_landmarks.dat',
+        'url': 'http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2'
+    },
+    'face_recognition': {
+        'filename': 'dlib_face_recognition_resnet_model_v1.dat',
+        'url': 'http://dlib.net/files/dlib_face_recognition_resnet_model_v1.dat.bz2'
+    }
+}
+
+def download_dlib_model(model_name):
+    """ดาวน์โหลด dlib model files ถ้ายังไม่มี"""
+    if model_name not in DLIB_MODELS:
+        raise ValueError(f"Unknown model: {model_name}")
+
+    model_info = DLIB_MODELS[model_name]
+    model_path = os.path.join(MODELS_DIR, model_info['filename'])
+
+    # ถ้ามีไฟล์อยู่แล้วก็ไม่ต้องโหลดใหม่
+    if os.path.exists(model_path):
+        logger.debug(f"Model {model_name} already exists at {model_path}")
+        return model_path
+
+    logger.info(f"Downloading {model_name} model from {model_info['url']}...")
+
+    try:
+        # ดาวน์โหลดไฟล์ .bz2
+        compressed_path = model_path + '.bz2'
+        urllib.request.urlretrieve(model_info['url'], compressed_path)
+
+        # แตกไฟล์
+        logger.info(f"Extracting {model_name} model...")
+        with bz2.open(compressed_path, 'rb') as f_in:
+            with open(model_path, 'wb') as f_out:
+                f_out.write(f_in.read())
+
+        # ลบไฟล์ .bz2
+        os.remove(compressed_path)
+
+        logger.info(f"Successfully downloaded {model_name} model to {model_path}")
+        return model_path
+    except Exception as e:
+        logger.error(f"Failed to download {model_name} model: {e}")
+        raise
+
+# โหลด dlib models ถ้ามี GPU
+dlib_cnn_detector = None
+dlib_shape_predictor = None
+dlib_face_encoder = None
+
+if has_gpu:
+    try:
+        logger.info("Loading dlib models for GPU face detection...")
+
+        # ดาวน์โหลด models ถ้ายังไม่มี
+        cnn_model_path = download_dlib_model('cnn_face_detector')
+        shape_model_path = download_dlib_model('shape_predictor')
+        face_rec_model_path = download_dlib_model('face_recognition')
+
+        # โหลด models
+        dlib_cnn_detector = dlib.cnn_face_detection_model_v1(cnn_model_path)
+        dlib_shape_predictor = dlib.shape_predictor(shape_model_path)
+        dlib_face_encoder = dlib.face_recognition_model_v1(face_rec_model_path)
+
+        logger.info("Successfully loaded dlib models for GPU")
+    except Exception as e:
+        logger.error(f"Failed to load dlib models: {e}")
+        logger.warning("Falling back to face_recognition library (CPU mode)")
+        has_gpu = False
+        dlib_cnn_detector = None
+        dlib_shape_predictor = None
+        dlib_face_encoder = None
 
 # Face Recognition Configuration
 # Auto-select model based on GPU availability if not explicitly set
@@ -775,11 +860,57 @@ def download_image_temp(drive_service, photo_id):
                 raise GoogleDriveError(f"Failed to download image {photo_id}: {e}")
     return None
 
+def extract_face_encodings_gpu(image_path):
+    """ใช้ dlib โดยตรงกับ GPU สำหรับ face detection และ encoding (เร็วกว่ามาก!)"""
+    try:
+        # โหลดรูป
+        img = dlib.load_rgb_image(image_path)
+
+        logger.info("Using dlib CNN detector with GPU for face detection")
+
+        # ใช้ CNN detector บน GPU
+        # upsample=1 หมายถึงขยายรูป 1 เท่า (สามารถปรับได้ถ้าต้องการหาใบหน้าเล็กๆ)
+        detections = dlib_cnn_detector(img, 1)
+
+        results = []
+        for detection in detections:
+            # ได้ bounding box จาก CNN detector
+            rect = detection.rect
+
+            # หา face landmarks (จุดสำคัญบนใบหน้า) สำหรับ alignment
+            shape = dlib_shape_predictor(img, rect)
+
+            # คำนวณ face encoding (128-d vector) ด้วย ResNet model
+            face_encoding = np.array(dlib_face_encoder.compute_face_descriptor(img, shape))
+
+            # แปลง rectangle เป็น format เดียวกับ face_recognition library
+            results.append({
+                'encoding': face_encoding,
+                'location': {
+                    'top': rect.top(),
+                    'right': rect.right(),
+                    'bottom': rect.bottom(),
+                    'left': rect.left()
+                }
+            })
+
+        logger.debug(f"Found {len(results)} face(s) using GPU")
+        return results
+
+    except Exception as e:
+        logger.error(f"Error extracting faces with GPU from {image_path}: {e}")
+        raise ImageProcessingError(f"Failed to extract faces with GPU from {image_path}: {e}")
+
 def extract_face_encodings(image_path):
-    """Extract face encodings from an image"""
+    """Extract face encodings from an image - ใช้ GPU ถ้ามี, ไม่งั้นใช้ CPU"""
+    # ถ้ามี GPU และโหลด dlib models สำเร็จ ให้ใช้ GPU
+    if has_gpu and dlib_cnn_detector is not None:
+        return extract_face_encodings_gpu(image_path)
+
+    # ไม่งั้นใช้ face_recognition library (CPU mode)
     try:
         image = face_recognition.load_image_file(image_path)
-        logger.info(f"Using model: {FACE_RECOGNITION_CONFIG['model']} for face detection")
+        logger.info(f"Using model: {FACE_RECOGNITION_CONFIG['model']} for face detection (CPU)")
         face_locations = face_recognition.face_locations(image, model=FACE_RECOGNITION_CONFIG['model'])
         face_encodings = face_recognition.face_encodings(image, face_locations)
 
