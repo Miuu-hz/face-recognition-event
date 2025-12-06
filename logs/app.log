@@ -83,3 +83,104 @@
 [2025-11-13 09:59:08] INFO [__main__:441] - ==================================================
 [2025-11-13 09:59:09] WARNING [werkzeug:97] -  * Debugger is active!
 [2025-11-13 09:59:09] INFO [werkzeug:97] -  * Debugger PIN: 290-758-708
+[2025-12-05 02:52:48] INFO [face_recognition_app:224] - GPU (CUDA) detected: dlib compiled with CUDA support
+[2025-12-05 02:52:48] INFO [face_recognition_app:602] - Restoring auto-sync threads on startup...
+[2025-12-05 02:52:48] INFO [face_recognition_app:624] - No events with auto-sync enabled
+[2025-12-05 02:52:50] INFO [face_recognition_app:224] - GPU (CUDA) detected: dlib compiled with CUDA support
+[2025-12-05 02:52:50] INFO [face_recognition_app:602] - Restoring auto-sync threads on startup...
+[2025-12-05 02:52:50] INFO [face_recognition_app:624] - No events with auto-sync enabled
+[2025-12-05 02:53:30] INFO [face_recognition_app:1000] - Created event: Test (ID: 4ef06976-0406-4dfd-b49e-7480444e6146)
+[2025-12-05 02:53:44] INFO [face_recognition_app:1452] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-05 02:54:03] INFO [face_recognition_app:191] - Successfully verified access to folder: Phopy all (ID: 1k-rOOFPAly9cdJqg5ksvhqGYBSp5Wo-s)
+[2025-12-05 02:54:03] INFO [face_recognition_app:1175] - Set folder 1k-rOOFPAly9cdJqg5ksvhqGYBSp5Wo-s for event 4ef06976-0406-4dfd-b49e-7480444e6146 via link
+[2025-12-05 02:54:05] INFO [face_recognition_app:1063] - Started background indexing task 79520db0-a5bf-42c6-832d-791de875604f for event 4ef06976-0406-4dfd-b49e-7480444e6146
+[2025-12-05 02:54:05] INFO [face_recognition_app:841] - Background Task 79520db0-a5bf-42c6-832d-791de875604f: Starting Face Indexing for Event: Test
+[2025-12-05 02:54:06] INFO [face_recognition_app:860] - Task 79520db0-a5bf-42c6-832d-791de875604f: Found 4 photos to process
+[2025-12-05 02:54:06] DEBUG [face_recognition_app:866] - Task 79520db0-a5bf-42c6-832d-791de875604f: Processing batch 1 (4 photos)
+[2025-12-05 02:54:06] DEBUG [face_recognition_app:874] - Task 79520db0-a5bf-42c6-832d-791de875604f: Processing 4.png
+[2025-12-05 02:54:14] DEBUG [face_recognition_app:907] - Task 79520db0-a5bf-42c6-832d-791de875604f: No faces found in 4.png
+[2025-12-05 02:54:14] DEBUG [face_recognition_app:874] - Task 79520db0-a5bf-42c6-832d-791de875604f: Processing 1.png
+[2025-12-05 02:54:16] DEBUG [face_recognition_app:907] - Task 79520db0-a5bf-42c6-832d-791de875604f: No faces found in 1.png
+[2025-12-05 02:54:16] DEBUG [face_recognition_app:874] - Task 79520db0-a5bf-42c6-832d-791de875604f: Processing 2.png
+[2025-12-05 02:54:18] DEBUG [face_recognition_app:907] - Task 79520db0-a5bf-42c6-832d-791de875604f: No faces found in 2.png
+[2025-12-05 02:54:18] DEBUG [face_recognition_app:874] - Task 79520db0-a5bf-42c6-832d-791de875604f: Processing 3.png
+[2025-12-05 02:54:20] DEBUG [face_recognition_app:907] - Task 79520db0-a5bf-42c6-832d-791de875604f: No faces found in 3.png
+[2025-12-05 02:54:20] INFO [face_recognition_app:930] - Task 79520db0-a5bf-42c6-832d-791de875604f: Indexing completed. Photos: 4, Faces: 0
+[2025-12-05 02:55:27] DEBUG [face_recognition_app:1496] - Found face in uploaded image: F&F1.jpg
+[2025-12-05 02:55:27] INFO [face_recognition_app:1505] - Created average encoding from 1 face(s) for event 4ef06976-0406-4dfd-b49e-7480444e6146
+[2025-12-05 02:55:27] INFO [face_recognition_app:1543] - Search completed for event 4ef06976-0406-4dfd-b49e-7480444e6146: Checked 0 faces, found 0 matching photos
+[2025-12-05 02:55:43] INFO [face_recognition_app:1000] - Created event: Test (ID: d8236a5a-43a7-4109-be9a-320b62ce3237)
+[2025-12-05 02:55:49] INFO [face_recognition_app:191] - Successfully verified access to folder: phopy app test photo (ID: 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb)
+[2025-12-05 02:55:49] INFO [face_recognition_app:1175] - Set folder 1YgexA-IJVdVC_g1v7fOCtRusd3SGs5Pb for event d8236a5a-43a7-4109-be9a-320b62ce3237 via link
+[2025-12-05 02:55:53] INFO [face_recognition_app:1063] - Started background indexing task eeca2b92-0636-4d0f-9942-4d1cf983fbe1 for event d8236a5a-43a7-4109-be9a-320b62ce3237
+[2025-12-05 02:55:53] INFO [face_recognition_app:841] - Background Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Starting Face Indexing for Event: Test
+[2025-12-05 02:55:53] INFO [face_recognition_app:860] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 27 photos to process
+[2025-12-05 02:55:53] DEBUG [face_recognition_app:866] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing batch 1 (20 photos)
+[2025-12-05 02:55:53] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing fuji3.jpg
+[2025-12-05 02:55:56] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in fuji3.jpg
+[2025-12-05 02:55:56] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing fuji2.jpg
+[2025-12-05 02:55:58] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in fuji2.jpg
+[2025-12-05 02:55:58] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing F&F1.jpg
+[2025-12-05 02:56:00] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 8 faces in F&F1.jpg
+[2025-12-05 02:56:00] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing fg1.jpg
+[2025-12-05 02:56:01] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in fg1.jpg
+[2025-12-05 02:56:01] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb3.jpg
+[2025-12-05 02:56:04] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb3.jpg
+[2025-12-05 02:56:04] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing b&f1.jpg
+[2025-12-05 02:56:06] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 3 faces in b&f1.jpg
+[2025-12-05 02:56:06] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing b&f2.jpg
+[2025-12-05 02:56:49] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 2 faces in b&f2.jpg
+[2025-12-05 02:56:49] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing fg2.jpg
+[2025-12-05 02:56:51] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in fg2.jpg
+[2025-12-05 02:56:51] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing fuji4.jpg
+[2025-12-05 02:56:53] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in fuji4.jpg
+[2025-12-05 02:56:53] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing G1.jpg
+[2025-12-05 02:56:55] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 7 faces in G1.jpg
+[2025-12-05 02:56:55] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb8.jpg
+[2025-12-05 02:56:57] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb8.jpg
+[2025-12-05 02:56:57] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing none.jpg
+[2025-12-05 02:56:59] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 2 faces in none.jpg
+[2025-12-05 02:56:59] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb1.jpg
+[2025-12-05 02:57:07] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb1.jpg
+[2025-12-05 02:57:07] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb2.jpg
+[2025-12-05 02:57:10] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb2.jpg
+[2025-12-05 02:57:10] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb5.jpg
+[2025-12-05 02:57:13] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb5.jpg
+[2025-12-05 02:57:13] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb6.jpg
+[2025-12-05 02:57:15] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb6.jpg
+[2025-12-05 02:57:15] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb4.jpg
+[2025-12-05 02:57:19] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb4.jpg
+[2025-12-05 02:57:19] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb7.jpg
+[2025-12-05 02:57:22] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb7.jpg
+[2025-12-05 02:57:22] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing none3.jpg
+[2025-12-05 02:57:25] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 4 faces in none3.jpg
+[2025-12-05 02:57:25] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing none4.jpg
+[2025-12-05 02:57:27] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 6 faces in none4.jpg
+[2025-12-05 02:57:27] DEBUG [face_recognition_app:866] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing batch 2 (7 photos)
+[2025-12-05 02:57:27] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing none2.jpg
+[2025-12-05 02:57:29] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 5 faces in none2.jpg
+[2025-12-05 02:57:29] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing f&g2.jpg
+[2025-12-05 02:57:31] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 3 faces in f&g2.jpg
+[2025-12-05 02:57:31] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing F&g1.jpg
+[2025-12-05 02:57:33] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 3 faces in F&g1.jpg
+[2025-12-05 02:57:33] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing f&g3.jpg
+[2025-12-05 02:57:35] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 3 faces in f&g3.jpg
+[2025-12-05 02:57:35] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing none6.jpg
+[2025-12-05 02:57:39] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in none6.jpg
+[2025-12-05 02:57:39] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing none7.jpg
+[2025-12-05 02:57:42] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in none7.jpg
+[2025-12-05 02:57:42] DEBUG [face_recognition_app:874] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Processing bb9.jpg
+[2025-12-05 02:57:44] DEBUG [face_recognition_app:894] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Found 1 faces in bb9.jpg
+[2025-12-05 02:57:44] INFO [face_recognition_app:930] - Task eeca2b92-0636-4d0f-9942-4d1cf983fbe1: Indexing completed. Photos: 27, Faces: 62
+[2025-12-05 03:03:53] DEBUG [face_recognition_app:1496] - Found face in uploaded image: F&F1.jpg
+[2025-12-05 03:03:53] INFO [face_recognition_app:1505] - Created average encoding from 1 face(s) for event d8236a5a-43a7-4109-be9a-320b62ce3237
+[2025-12-05 03:03:53] DEBUG [face_recognition_app:1539] - Match found: F&F1.jpg (distance: 0.000)
+[2025-12-05 03:03:53] DEBUG [face_recognition_app:1539] - Match found: F&g1.jpg (distance: 0.460)
+[2025-12-05 03:03:53] DEBUG [face_recognition_app:1539] - Match found: none6.jpg (distance: 0.487)
+[2025-12-05 03:03:53] INFO [face_recognition_app:1543] - Search completed for event d8236a5a-43a7-4109-be9a-320b62ce3237: Checked 62 faces, found 3 matching photos
+[2025-12-06 22:32:45] INFO [face_recognition_app:224] - GPU (CUDA) detected: dlib compiled with CUDA support
+[2025-12-06 22:32:45] INFO [face_recognition_app:602] - Restoring auto-sync threads on startup...
+[2025-12-06 22:32:45] INFO [face_recognition_app:624] - No events with auto-sync enabled
+[2025-12-06 22:32:47] INFO [face_recognition_app:224] - GPU (CUDA) detected: dlib compiled with CUDA support
+[2025-12-06 22:32:47] INFO [face_recognition_app:602] - Restoring auto-sync threads on startup...
+[2025-12-06 22:32:47] INFO [face_recognition_app:624] - No events with auto-sync enabled
