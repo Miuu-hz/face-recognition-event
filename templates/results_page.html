@@ -3,83 +3,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Photos</title>
+    <title>Your Photos - {{ event_name }}</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         :root {
-            --primary-brown: #8B4513;
-            --cream: #F5F5DC;
-            --soft-white: #FAF8F5;
+            --bg-primary: #020617;
+            --bg-secondary: #0f172a;
+            --bg-card: rgba(15, 23, 42, 0.6);
+            --border-primary: #1e293b;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --accent-indigo: #6366f1;
+            --accent-purple: #a855f7;
+            --success: #10b981;
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--soft-white) 0%, var(--cream) 100%);
-            color: var(--primary-brown);
-            padding: 2rem;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
         }
+
+        /* Background Effects */
+        .bg-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-blur-1, .bg-blur-2 {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.3;
+        }
+
+        .bg-blur-1 {
+            top: -10%;
+            right: -5%;
+            width: 500px;
+            height: 500px;
+            background: var(--accent-purple);
+        }
+
+        .bg-blur-2 {
+            bottom: -10%;
+            left: -5%;
+            width: 600px;
+            height: 600px;
+            background: var(--accent-indigo);
+        }
+
+        /* Navbar */
+        nav {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 3rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            background: white;
+            padding: 0.375rem;
+            border-radius: 0.5rem;
+            width: 32px;
+            height: 32px;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+        }
+
+        /* Main Container */
         .container {
-            max-width: 1200px;
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 2rem 1.5rem;
         }
-        h1 {
+
+        /* Header */
+        .header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
         }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+            margin-top: 0.5rem;
+        }
+
+        .photo-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--accent-indigo);
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+
+        /* Results Grid */
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem;
+            margin-bottom: 3rem;
         }
+
         .photo-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 1rem;
             overflow: hidden;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
         }
+
         .photo-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-8px);
+            border-color: var(--accent-indigo);
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
         }
-        .photo-card img {
+
+        .photo-preview {
             width: 100%;
-            height: 250px;
-            object-fit: cover;
+            height: 280px;
+            border: none;
+            background: var(--bg-secondary);
         }
-        .photo-card a.download-btn {
-            display: block;
-            text-align: center;
-            padding: 10px;
-            background: var(--primary-brown);
+
+        .download-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
             color: white;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
+
+        .download-btn:hover {
+            background: linear-gradient(135deg, #5558e3, #9333ea);
+        }
+
+        /* No Results */
         .no-results {
             text-align: center;
-            font-size: 1.2rem;
-            padding: 3rem;
+            padding: 4rem 2rem;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-primary);
+            border-radius: 1.5rem;
+            margin: 0 auto;
+            max-width: 600px;
+        }
+
+        .no-results-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            opacity: 0.5;
+        }
+
+        .no-results h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .no-results p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-indigo);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Background Effects -->
+    <div class="bg-effects">
+        <div class="bg-blur-1"></div>
+        <div class="bg-blur-2"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav>
+        <div class="logo" onclick="window.location.href='/'">
+            <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
+            </div>
+            <span class="logo-text">PHOPY</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
     <div class="container">
-        <h1>📸 We Found Your Photos!</h1>
         {% if photo_links %}
+            <div class="header">
+                <h1>
+                    <span class="gradient-text">✨ Found Your Memories!</span>
+                </h1>
+                <p>We discovered {{ photo_links|length }} photo{{ 's' if photo_links|length != 1 else '' }} with your face</p>
+                <div class="photo-count">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span>{{ photo_links|length }} photo{{ 's' if photo_links|length != 1 else '' }}</span>
+                </div>
+            </div>
+
             <div class="results-grid">
                 {% for link in photo_links %}
                     <div class="photo-card">
-                        <iframe src="{{ link.replace('/view', '/preview') }}" width="100%" height="250px" style="border:0;"></iframe>
-                        <a href="{{ link }}" target="_blank" class="download-btn">View & Download</a>
+                        <iframe src="{{ link.replace('/view', '/preview') }}"
+                                class="photo-preview"
+                                frameborder="0"
+                                allowfullscreen></iframe>
+                        <a href="{{ link }}" target="_blank" class="download-btn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            View & Download
+                        </a>
                     </div>
                 {% endfor %}
             </div>
+
+            <div class="action-buttons">
+                <a href="{{ url_for('event_page', event_id=event_id) }}" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    Search Again
+                </a>
+                <a href="/events" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    </svg>
+                    Browse Other Events
+                </a>
+            </div>
         {% else %}
             <div class="no-results">
-                <p>😔 We couldn't find any photos with this face. Please try another photo.</p>
+                <svg class="no-results-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                    <line x1="8" y1="11" x2="14" y2="11"/>
+                </svg>
+                <h2>No Photos Found</h2>
+                <p>We couldn't find any photos matching your face. This could be because:</p>
+                <ul style="text-align: left; max-width: 400px; margin: 1rem auto; color: var(--text-secondary); line-height: 1.8;">
+                    <li>• Try uploading different photos with better lighting</li>
+                    <li>• Make sure your face is clearly visible</li>
+                    <li>• Upload multiple photos from different angles</li>
+                    <li>• Check if you're searching in the correct event</li>
+                </ul>
+
+                <div class="action-buttons">
+                    <a href="{{ url_for('event_page', event_id=event_id) }}" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                        Try Again
+                    </a>
+                    <a href="/events" class="btn btn-secondary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        </svg>
+                        Browse Other Events
+                    </a>
+                </div>
             </div>
         {% endif %}
-        <div style="text-align: center; margin-top: 2rem;">
-            <a href="{{ url_for('event_page', event_id=event_id) }}">Try another search</a>
-        </div>
     </div>
 </body>
 </html>

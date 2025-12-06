@@ -12,55 +12,178 @@
         }
 
         :root {
-            --primary-brown: #8B4513;
-            --light-brown: #D2B48C;
-            --dark-brown: #654321;
-            --cream: #F5F5DC;
-            --sage-green: #9CAF88;
-            --warm-gray: #A0937D;
-            --soft-white: #FAF8F5;
-            --accent-orange: #CD853F;
+            --bg-primary: #020617;
+            --bg-secondary: #0f172a;
+            --bg-card: rgba(15, 23, 42, 0.6);
+            --border-primary: #1e293b;
+            --border-hover: #334155;
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-indigo: #6366f1;
+            --accent-purple: #a855f7;
+            --accent-pink: #ec4899;
+            --success: #10b981;
+            --warning: #fbbf24;
+            --error: #ef4444;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--soft-white) 0%, var(--cream) 100%);
-            color: var(--dark-brown);
-            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background Effects */
+        .bg-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-blur-1 {
+            position: absolute;
+            top: -10%;
+            right: -5%;
+            width: 500px;
+            height: 500px;
+            background: rgba(147, 51, 234, 0.15);
+            border-radius: 50%;
+            filter: blur(120px);
+        }
+
+        .bg-blur-2 {
+            position: absolute;
+            bottom: -10%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 50%;
+            filter: blur(100px);
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 3rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            background: linear-gradient(to right, var(--accent-indigo), var(--accent-purple));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            background: transparent;
+            border: 1px solid var(--border-primary);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--error);
+            color: var(--error);
+            background: rgba(239, 68, 68, 0.1);
         }
 
         h1 {
-            color: var(--primary-brown);
+            font-size: 2.5rem;
+            font-weight: 700;
             text-align: center;
             margin-bottom: 2rem;
-            font-size: 2.5rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            background: linear-gradient(to right, var(--text-primary), var(--text-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .section {
-            background: white;
-            border-radius: 15px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-radius: 1rem;
             padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 8px 25px rgba(139, 69, 19, 0.1);
-            border: 1px solid var(--light-brown);
+            border: 1px solid var(--border-primary);
+            transition: border-color 0.2s;
+        }
+
+        .section:hover {
+            border-color: var(--border-hover);
         }
 
         .section h2 {
-            color: var(--primary-brown);
+            font-size: 1.5rem;
             margin-bottom: 1.5rem;
-            font-size: 1.8rem;
-            border-bottom: 2px solid var(--light-brown);
-            padding-bottom: 0.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
+        /* Forms */
         .create-form {
             display: flex;
             gap: 1rem;
@@ -76,191 +199,209 @@
         label {
             display: block;
             margin-bottom: 0.5rem;
-            color: var(--primary-brown);
-            font-weight: 600;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.875rem;
         }
 
         input[type="text"], input[type="url"] {
             width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--light-brown);
-            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-primary);
+            border-radius: 0.5rem;
             font-size: 1rem;
-            background: var(--soft-white);
-            transition: all 0.3s ease;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.2s;
         }
 
         input[type="text"]:focus, input[type="url"]:focus {
             outline: none;
-            border-color: var(--primary-brown);
-            box-shadow: 0 0 10px rgba(139, 69, 19, 0.2);
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
+        .error-message {
+            color: var(--error);
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Buttons */
         .btn {
-            padding: 12px 24px;
+            padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 0.5rem;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s;
             text-decoration: none;
-            display: inline-block;
-            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
         }
 
         .btn-primary {
-            background: var(--primary-brown);
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
             color: white;
         }
 
         .btn-primary:hover {
-            background: var(--dark-brown);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(139, 69, 19, 0.3);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
         }
 
         .btn-secondary {
-            background: var(--sage-green);
-            color: white;
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent-indigo);
+            border: 1px solid var(--accent-indigo);
         }
 
         .btn-secondary:hover {
-            background: #7A9973;
-            transform: translateY(-2px);
+            background: rgba(99, 102, 241, 0.3);
         }
 
         .btn-danger {
-            background: #C44536;
+            background: var(--error);
             color: white;
-            padding: 8px 12px;
-            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
         }
 
         .btn-danger:hover {
-            background: #A03028;
+            background: #dc2626;
         }
 
+        /* Events Grid */
         .events-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
         }
 
         .event-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            padding: 1.5rem;
             position: relative;
-            box-shadow: 0 5px 20px rgba(139, 69, 19, 0.1);
-            border: 1px solid var(--light-brown);
-            transition: all 0.3s ease;
+            border: 1px solid var(--border-primary);
+            transition: all 0.3s;
         }
 
         .event-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(139, 69, 19, 0.15);
+            border-color: var(--accent-indigo);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
         }
 
         .delete-btn {
             position: absolute;
-            top: 15px;
-            right: 15px;
+            top: 1rem;
+            right: 1rem;
         }
 
         .event-title {
-            color: var(--primary-brown);
+            color: var(--text-primary);
             margin-bottom: 1rem;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
         }
 
         .event-link {
             word-wrap: break-word;
-            color: var(--sage-green);
+            color: var(--accent-indigo);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 500;
+            font-size: 0.875rem;
         }
 
         .event-link:hover {
-            color: var(--primary-brown);
+            color: var(--accent-purple);
         }
 
         .qr-code {
             max-width: 150px;
             margin: 1rem 0;
-            border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border-radius: 0.5rem;
+            border: 2px solid var(--border-primary);
         }
 
         .folder-info {
-            background: linear-gradient(135deg, var(--cream) 0%, #F0E68C 100%);
-            border-left: 5px solid var(--sage-green);
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            border-radius: 8px;
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--accent-indigo);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0.5rem;
         }
 
+        /* Status Badges */
         .status {
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 20px;
-            display: inline-block;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             margin: 0.5rem 0;
+            font-size: 0.875rem;
         }
 
         .status.in-progress {
-            background: #FFF3CD;
-            color: #856404;
-            border: 1px solid #FFEAA7;
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
         }
 
         .status.completed {
-            background: #D1ECF1;
-            color: #0C5460;
-            border: 1px solid #B8E6B8;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
         }
 
         /* Progress Bar Styles */
         .progress-container {
             width: 100%;
-            background: #F0E68C;
-            border-radius: 10px;
+            background: var(--bg-secondary);
+            border-radius: 9999px;
             overflow: hidden;
             margin: 1rem 0;
-            border: 2px solid var(--light-brown);
+            border: 1px solid var(--border-primary);
+            height: 32px;
         }
 
         .progress-bar {
-            height: 30px;
-            background: linear-gradient(90deg, var(--sage-green) 0%, var(--primary-brown) 100%);
-            border-radius: 8px;
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-indigo) 0%, var(--accent-purple) 100%);
+            border-radius: 9999px;
             transition: width 0.5s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
-            font-size: 0.9rem;
+            font-weight: 700;
+            font-size: 0.875rem;
         }
 
         .progress-info {
             display: flex;
             justify-content: space-between;
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--dark-brown);
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
         }
 
         .progress-stats {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
             flex-wrap: wrap;
         }
 
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.5rem;
         }
 
         /* Toast Notification Styles */
@@ -275,49 +416,50 @@
         }
 
         .toast {
-            min-width: 300px;
-            padding: 16px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 320px;
+            padding: 1rem 1.25rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 0.75rem;
             animation: slideIn 0.3s ease;
             font-weight: 500;
+            backdrop-filter: blur(20px);
         }
 
         .toast.success {
-            background: #D1F2EB;
-            color: #0C5460;
-            border-left: 4px solid #28a745;
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
         }
 
         .toast.error {
-            background: #F8D7DA;
-            color: #721C24;
-            border-left: 4px solid #dc3545;
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+            border: 1px solid var(--error);
         }
 
         .toast.info {
-            background: #D1ECF1;
-            color: #0C5460;
-            border-left: 4px solid #17a2b8;
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent-indigo);
+            border: 1px solid var(--accent-indigo);
         }
 
         .toast.warning {
-            background: #FFF3CD;
-            color: #856404;
-            border-left: 4px solid #ffc107;
+            background: rgba(251, 191, 36, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
         }
 
         .toast-icon {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
         }
 
         .toast-close {
             margin-left: auto;
             cursor: pointer;
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             opacity: 0.6;
             transition: opacity 0.2s;
         }
@@ -350,12 +492,18 @@
 
         .no-events {
             text-align: center;
-            padding: 3rem;
-            color: var(--warm-gray);
-            font-size: 1.2rem;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
         }
 
-        /* Popup Modal Styles */
+        .no-events svg {
+            width: 4rem;
+            height: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -364,20 +512,20 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            backdrop-filter: blur(5px);
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
         }
 
         .modal-content {
-            background-color: var(--soft-white);
+            background: var(--bg-secondary);
             margin: 5% auto;
             padding: 0;
-            border-radius: 15px;
-            width: 80%;
+            border-radius: 1rem;
+            width: 90%;
             max-width: 600px;
             max-height: 80vh;
             overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid var(--border-primary);
             animation: modalSlideIn 0.3s ease;
         }
 
@@ -387,7 +535,7 @@
         }
 
         .modal-header {
-            background: var(--primary-brown);
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
             color: white;
             padding: 1.5rem 2rem;
             position: relative;
@@ -395,24 +543,23 @@
 
         .modal-header h3 {
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
         }
 
         .close {
             color: white;
             position: absolute;
-            right: 2rem;
+            right: 1.5rem;
             top: 50%;
             transform: translateY(-50%);
             font-size: 2rem;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: opacity 0.2s;
         }
 
         .close:hover {
-            color: var(--cream);
-            transform: translateY(-50%) scale(1.1);
+            opacity: 0.7;
         }
 
         .modal-body {
@@ -427,15 +574,16 @@
         }
 
         .folder-item {
-            background: var(--cream);
+            background: var(--bg-card);
             margin-bottom: 0.5rem;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            border: 1px solid var(--light-brown);
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            border: 1px solid var(--border-primary);
         }
 
         .folder-item:hover {
-            background: var(--light-brown);
+            background: var(--bg-secondary);
+            border-color: var(--accent-indigo);
             transform: translateX(5px);
         }
 
@@ -443,8 +591,8 @@
             display: block;
             padding: 1rem;
             text-decoration: none;
-            color: var(--dark-brown);
-            font-weight: 600;
+            color: var(--text-primary);
+            font-weight: 500;
         }
 
         .folder-icon {
@@ -454,7 +602,7 @@
         .paste-section {
             margin-top: 2rem;
             padding-top: 2rem;
-            border-top: 2px solid var(--light-brown);
+            border-top: 1px solid var(--border-primary);
         }
 
         .paste-form {
@@ -470,9 +618,9 @@
         /* Loading spinner */
         .loading {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 1s ease-in-out infinite;
@@ -483,32 +631,77 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Responsive Design */
+        /* Responsive */
         @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+
+            .btn-logout span {
+                display: none;
+            }
+
+            .btn-logout {
+                padding: 0.625rem;
+            }
+
             .container {
                 padding: 1rem;
             }
-            
+
             .events-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .modal-content {
                 width: 95%;
                 margin: 10% auto;
             }
-            
+
             .create-form {
                 flex-direction: column;
             }
-            
+
             .form-group {
                 min-width: 100%;
+            }
+
+            h1 {
+                font-size: 2rem;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Background Effects -->
+    <div class="bg-effects">
+        <div class="bg-blur-1"></div>
+        <div class="bg-blur-2"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="logo" onclick="window.location.href='/'">
+            <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
+            </div>
+            <span class="logo-text">PHOPY</span>
+        </div>
+        <div class="nav-actions">
+            <a href="/logout" class="btn-logout">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span>Sign Out</span>
+            </a>
+        </div>
+    </nav>
+
     <!-- Toast Notification Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -549,16 +742,107 @@
                                 {% if event.drive_folder_id %}
                                     <p><strong>📁 Linked Folder:</strong> {{ event.drive_folder_id[:20] }}...</p>
 
-                                    {% if event.indexing_status == 'Not Started' %}
-                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">🚀 Start Face Indexing</a>
-                                    {% elif event.indexing_status == 'In Progress' %}
-                                        <div class="status in-progress" id="status-{{ event.id }}" data-event-id="{{ event.id }}">
-                                            <span class="loading"></span>⏳ Indexing in progress...
+                                    <!-- Checkpoint resume indicator -->
+                                    <div id="checkpoint-indicator-{{ event.id }}" class="checkpoint-info" style="display: none; margin-bottom: 1rem;">
+                                        <div style="background: rgba(251, 191, 36, 0.2); border: 1px solid var(--warning); border-radius: 0.5rem; padding: 0.75rem; color: var(--warning);">
+                                            <strong>⏸️ Interrupted Progress Detected</strong>
+                                            <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
+                                                <span id="checkpoint-count-{{ event.id }}"></span> photos already processed.
+                                                Click below to resume from where you left off.
+                                            </p>
                                         </div>
+                                    </div>
+
+                                    {% if event.indexing_status == 'Not Started' %}
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary" id="start-btn-{{ event.id }}">
+                                            <span id="start-icon-{{ event.id }}">🚀</span>
+                                            <span id="start-text-{{ event.id }}">Start Face Indexing</span>
+                                        </a>
+                                    {% elif event.indexing_status == 'In Progress' %}
+                                        <div id="status-{{ event.id }}" data-event-id="{{ event.id }}">
+                                            <div class="status in-progress" style="margin-bottom: 1rem;">
+                                                <span class="loading"></span>⏳ Indexing in progress...
+                                            </div>
+
+                                            <!-- Progress Info -->
+                                            <div style="margin-bottom: 1rem;">
+                                                <div class="progress-container">
+                                                    <div class="progress-bar" style="width: {% if event.indexed_photos and event.indexed_photos > 0 %}{{ (event.indexed_photos / (event.indexed_photos + 1)) * 100 }}{% else %}0{% endif %}%" id="progress-bar-{{ event.id }}">
+                                                        <span id="progress-text-{{ event.id }}">{{ event.indexed_photos or 0 }} photos</span>
+                                                    </div>
+                                                </div>
+                                                <div class="progress-info">
+                                                    <div class="progress-stats">
+                                                        <div class="stat-item">
+                                                            <strong>📸</strong> <span id="photos-count-{{ event.id }}">{{ event.indexed_photos or 0 }}</span> photos
+                                                        </div>
+                                                        <div class="stat-item">
+                                                            <strong>👤</strong> <span id="faces-count-{{ event.id }}">{{ event.total_faces or 0 }}</span> faces
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Pause Button -->
+                                            <form action="{{ url_for('pause_indexing', event_id=event.id) }}" method="post" style="display: inline;">
+                                                <button type="submit" class="btn btn-secondary">
+                                                    ⏸️ Pause Indexing
+                                                </button>
+                                            </form>
+                                        </div>
+                                    {% elif event.indexing_status == 'Paused' %}
+                                        <div class="status" style="background: rgba(251, 191, 36, 0.2); color: var(--warning); border: 1px solid var(--warning); margin-bottom: 1rem;">
+                                            ⏸️ Indexing Paused
+                                        </div>
+
+                                        <!-- Show Progress -->
+                                        <div style="margin-bottom: 1rem;">
+                                            <div class="progress-container">
+                                                <div class="progress-bar" style="width: {% if event.indexed_photos and event.indexed_photos > 0 %}{{ (event.indexed_photos / (event.indexed_photos + 1)) * 100 }}{% else %}0{% endif %}%">
+                                                    {{ event.indexed_photos or 0 }} photos
+                                                </div>
+                                            </div>
+                                            <div class="progress-info">
+                                                <div class="progress-stats">
+                                                    <div class="stat-item">
+                                                        <strong>📸</strong> {{ event.indexed_photos or 0 }} photos processed
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <strong>👤</strong> {{ event.total_faces or 0 }} faces found
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Resume Button -->
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">
+                                            ▶️ Resume Indexing
+                                        </a>
                                     {% elif event.indexing_status == 'Completed' %}
                                         <div class="status completed">✅ Indexing Complete!</div>
+
+                                        <!-- Check for new photos indicator -->
+                                        <div id="new-photos-indicator-{{ event.id }}" style="display: none; margin-top: 1rem;">
+                                            <div style="background: rgba(99, 102, 241, 0.2); border: 1px solid var(--accent-indigo); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem;">
+                                                <strong>📸 New Photos Detected!</strong>
+                                                <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
+                                                    <span id="new-photos-count-{{ event.id }}"></span> new photos found in Google Drive.
+                                                    Click below to index them.
+                                                </p>
+                                            </div>
+                                            <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">
+                                                🔄 Index New Photos
+                                            </a>
+                                        </div>
                                     {% elif event.indexing_status == 'Failed' %}
-                                        <div class="status" style="background-color: #f8d7da; color: #721c24;">⚠️ Indexing Failed</div>
+                                        <div class="status" style="background: rgba(239, 68, 68, 0.2); color: var(--error); border: 1px solid var(--error); margin-bottom: 1rem;">
+                                            ⚠️ Indexing Failed
+                                        </div>
+                                        <!-- Show restart button with checkpoint detection -->
+                                        <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary" id="restart-btn-{{ event.id }}">
+                                            <span id="restart-icon-{{ event.id }}">🔄</span>
+                                            <span id="restart-text-{{ event.id }}">Restart Indexing</span>
+                                        </a>
                                     {% endif %}
 
                                 {% else %}
@@ -852,56 +1136,44 @@
 
         // Update UI with task data
         function updateTaskUI(eventId, task) {
-            const statusDiv = document.getElementById(`status-${eventId}`);
-            if (!statusDiv) return;
-
             if (task.status === 'running') {
-                // Update progress with visual bar
-                const progressPercent = task.progress_percent || 0;
-                const currentItem = task.current_item || 'Processing...';
-                const facesFound = task.faces_found || 0;
-                const eta = task.eta_seconds ? formatTime(task.eta_seconds) : 'Calculating...';
+                // Update progress bar
+                const progressBar = document.getElementById(`progress-bar-${eventId}`);
+                const progressText = document.getElementById(`progress-text-${eventId}`);
+                const photosCount = document.getElementById(`photos-count-${eventId}`);
+                const facesCount = document.getElementById(`faces-count-${eventId}`);
 
-                statusDiv.innerHTML = `
-                    <div style="font-weight: bold; margin-bottom: 0.5rem;">⏳ Indexing in progress...</div>
+                if (progressBar && task.progress_percent) {
+                    progressBar.style.width = task.progress_percent + '%';
+                }
 
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: ${progressPercent}%">
-                            ${progressPercent}%
-                        </div>
-                    </div>
+                if (progressText) {
+                    progressText.textContent = `${task.progress || 0} photos`;
+                }
 
-                    <div class="progress-info">
-                        <div class="progress-stats">
-                            <div class="stat-item">
-                                <strong>📸</strong> ${task.progress}/${task.total} photos
-                            </div>
-                            <div class="stat-item">
-                                <strong>👤</strong> ${facesFound} faces found
-                            </div>
-                            <div class="stat-item">
-                                <strong>⏱️</strong> ETA: ${eta}
-                            </div>
-                        </div>
-                    </div>
+                if (photosCount) {
+                    photosCount.textContent = task.progress || 0;
+                }
 
-                    <div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.8;">
-                        <strong>Current:</strong> ${currentItem}
-                    </div>
-                `;
+                if (facesCount) {
+                    facesCount.textContent = task.faces_found || 0;
+                }
             } else if (task.status === 'completed') {
                 // Show success toast
                 showToast(`Indexing completed! Found ${task.faces_found || 0} faces in ${task.total} photos.`, 'success');
                 // Reload page to show updated status
                 setTimeout(() => location.reload(), 1000);
             } else if (task.status === 'failed') {
-                // Show error toast
-                showToast(`Indexing failed: ${task.error || 'Unknown error'}`, 'error', 8000);
-                // Show error in status div
-                statusDiv.className = 'status';
-                statusDiv.style.backgroundColor = '#f8d7da';
-                statusDiv.style.color = '#721c24';
-                statusDiv.innerHTML = `⚠️ Indexing Failed<br><small style="font-weight: normal;">${task.error || 'Unknown error'}</small>`;
+                // Check if it was paused
+                if (task.error && task.error.includes('Paused')) {
+                    // Reload to show paused state
+                    location.reload();
+                } else {
+                    // Show error toast
+                    showToast(`Indexing failed: ${task.error || 'Unknown error'}`, 'error', 8000);
+                    // Reload to show failed state
+                    setTimeout(() => location.reload(), 1000);
+                }
             }
         }
 
@@ -933,13 +1205,117 @@
         }
 
         // Start SSE streams for all events with "In Progress" status
+        // Check checkpoint status for resume functionality
+        async function checkCheckpointStatus(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/checkpoint/status`);
+                const data = await response.json();
+
+                if (data.can_resume) {
+                    // Show checkpoint indicator
+                    const indicator = document.getElementById(`checkpoint-indicator-${eventId}`);
+                    const countSpan = document.getElementById(`checkpoint-count-${eventId}`);
+
+                    if (indicator && countSpan) {
+                        indicator.style.display = 'block';
+                        countSpan.textContent = data.checkpoint_count;
+
+                        // Update button text to "Resume"
+                        const startIcon = document.getElementById(`start-icon-${eventId}`);
+                        const startText = document.getElementById(`start-text-${eventId}`);
+
+                        if (startIcon && startText) {
+                            startIcon.textContent = '▶️';
+                            startText.textContent = 'Resume Face Indexing';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking checkpoint status:', error);
+            }
+        }
+
+        // Check for new photos in completed events
+        async function checkForNewPhotos(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/new_photos`);
+                const data = await response.json();
+
+                if (data.has_new && data.new_photos > 0) {
+                    // Show new photos indicator
+                    const indicator = document.getElementById(`new-photos-indicator-${eventId}`);
+                    const countSpan = document.getElementById(`new-photos-count-${eventId}`);
+
+                    if (indicator && countSpan) {
+                        indicator.style.display = 'block';
+                        countSpan.textContent = data.new_photos;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking for new photos:', error);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            const statusDivs = document.querySelectorAll('.status.in-progress[data-event-id]');
+            // Check for in-progress tasks and update progress in real-time
+            const statusDivs = document.querySelectorAll('[data-event-id]');
             statusDivs.forEach(div => {
                 const eventId = div.getAttribute('data-event-id');
                 connectTaskStream(eventId);
             });
+
+            // Check checkpoint status for events with "Not Started" status
+            const startButtons = document.querySelectorAll('[id^="start-btn-"]');
+            startButtons.forEach(button => {
+                const eventId = button.id.replace('start-btn-', '');
+                checkCheckpointStatus(eventId);
+            });
+
+            // Check checkpoint status for events with "Failed" status (for Resume)
+            const restartButtons = document.querySelectorAll('[id^="restart-btn-"]');
+            restartButtons.forEach(button => {
+                const eventId = button.id.replace('restart-btn-', '');
+                checkCheckpointForRestart(eventId);
+            });
+
+            // Check for new photos in completed events
+            const newPhotoIndicators = document.querySelectorAll('[id^="new-photos-indicator-"]');
+            const completedEventIds = [];
+            newPhotoIndicators.forEach(indicator => {
+                const eventId = indicator.id.replace('new-photos-indicator-', '');
+                completedEventIds.push(eventId);
+                // Initial check
+                checkForNewPhotos(eventId);
+            });
+
+            // Auto-check for new photos every 30 seconds
+            if (completedEventIds.length > 0) {
+                setInterval(() => {
+                    completedEventIds.forEach(eventId => checkForNewPhotos(eventId));
+                }, 30000); // 30 seconds
+            }
         });
+
+        // Check checkpoint for restart button (Failed status)
+        async function checkCheckpointForRestart(eventId) {
+            try {
+                const response = await fetch(`/api/event/${eventId}/checkpoint/status`);
+                const data = await response.json();
+
+                if (data.has_checkpoints && data.checkpoint_count > 0) {
+                    // Update button to show Resume instead of Restart
+                    const restartIcon = document.getElementById(`restart-icon-${eventId}`);
+                    const restartText = document.getElementById(`restart-text-${eventId}`);
+
+                    if (restartIcon && restartText) {
+                        restartIcon.textContent = '▶️';
+                        restartText.textContent = `Resume Indexing (${data.checkpoint_count} photos done)`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking checkpoint for restart:', error);
+            }
+        }
     </script>
 </body>
 </html>

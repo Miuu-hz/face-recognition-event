@@ -1,4 +1,5 @@
 -- Drop existing tables if they exist
+DROP TABLE IF EXISTS indexing_checkpoints;
 DROP TABLE IF EXISTS faces;
 DROP TABLE IF EXISTS events;
 
@@ -9,6 +10,7 @@ CREATE TABLE events (
     link TEXT NOT NULL,
     qr_path TEXT NOT NULL,
     drive_folder_id TEXT,
+    drive_page_token TEXT,
     indexing_status TEXT DEFAULT 'Not Started',
     indexed_photos INTEGER DEFAULT 0,
     total_faces INTEGER DEFAULT 0,
@@ -31,3 +33,19 @@ CREATE TABLE faces (
 -- Indexes for performance
 CREATE INDEX idx_faces_event ON faces(event_id);
 CREATE INDEX idx_faces_photo ON faces(photo_id);
+CREATE INDEX idx_faces_event_indexed ON faces(event_id, indexed_at);  -- Composite index for ordered queries
+
+-- Indexing checkpoints for resume functionality
+CREATE TABLE indexing_checkpoints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT NOT NULL,
+    photo_id TEXT NOT NULL,
+    photo_name TEXT NOT NULL,
+    faces_found INTEGER DEFAULT 0,
+    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+);
+
+-- Index for checkpoint queries
+CREATE INDEX idx_checkpoints_event ON indexing_checkpoints(event_id);
+CREATE INDEX idx_checkpoints_photo ON indexing_checkpoints(event_id, photo_id);

@@ -216,41 +216,32 @@ DATABASE = os.getenv('DATABASE_PATH', 'database.db')
 def detect_gpu():
     """Detect if GPU is available for face recognition
 
-    Returns True ONLY if dlib was compiled with CUDA support.
-    Having an NVIDIA GPU is not enough - dlib must be compiled with CUDA!
-
-    Note: nvidia-smi showing GPU does NOT mean dlib can use it.
+    Returns True if:
+    1. dlib was compiled with CUDA support, OR
+    2. nvidia-smi detects GPU (as fallback check)
     """
+    # Method 1: Check if dlib has CUDA support (most accurate)
     try:
         import dlib
         if hasattr(dlib, 'DLIB_USE_CUDA') and dlib.DLIB_USE_CUDA:
-            logger.info("GPU (CUDA) detected: dlib compiled with CUDA support")
             return True
-        else:
-            # Check if NVIDIA GPU exists but dlib doesn't have CUDA
-            try:
-                import subprocess
-                result = subprocess.run(
-                    ['nvidia-smi'],
-                    capture_output=True,
-                    text=True,
-                    timeout=2
-                )
-                if result.returncode == 0:
-                    logger.warning("⚠️  NVIDIA GPU detected but dlib is NOT compiled with CUDA!")
-                    logger.warning("    Face recognition will use CPU (slower than optimal)")
-                    logger.warning("    To use GPU: recompile dlib with CUDA, or set FACE_MODEL=hog in .env")
-            except:
-                pass
+    except:
+        pass
 
-            logger.info("GPU not available: using CPU")
-            return False
-    except ImportError:
-        logger.warning("dlib not installed")
-        return False
-    except Exception as e:
-        logger.error(f"Error detecting GPU: {e}")
-        return False
+    # Method 2: Check nvidia-smi as fallback
+    try:
+        import subprocess
+        result = subprocess.run(
+            ['nvidia-smi'],
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+        return result.returncode == 0
+    except:
+        pass
+
+    return False
 
 has_gpu = detect_gpu()
 
@@ -348,6 +339,65 @@ FACE_RECOGNITION_CONFIG = {
     'num_jitters': int(os.getenv('NUM_JITTERS', '1')),
 }
 
+# --- In-Memory Encoding Cache ---
+# Cache structure: {event_id: {'encodings': np.array, 'photo_ids': list, 'photo_names': list, 'timestamp': datetime}}
+encoding_cache = {}
+cache_lock = threading.Lock()  # Thread-safe cache access
+
+def get_cached_encodings(event_id):
+    """Get encodings from cache or database"""
+    with cache_lock:
+        if event_id in encoding_cache:
+            logger.debug(f"Cache HIT for event {event_id}")
+            return encoding_cache[event_id]
+
+    logger.debug(f"Cache MISS for event {event_id}, loading from database...")
+
+    # Load from database
+    db = get_db()
+    cursor = db.execute(
+        'SELECT photo_id, photo_name, face_encoding FROM faces WHERE event_id = ? ORDER BY indexed_at',
+        (event_id,)
+    )
+    rows = cursor.fetchall()
+
+    if not rows:
+        return None
+
+    # Convert to arrays
+    photo_ids = []
+    photo_names = []
+    stored_encodings = []
+
+    for row in rows:
+        photo_ids.append(row['photo_id'])
+        photo_names.append(row['photo_name'])
+        stored_encodings.append(np.frombuffer(row['face_encoding'], dtype=np.float64))
+
+    # Stack into 2D array
+    stored_encodings = np.array(stored_encodings)
+
+    # Cache it
+    cache_data = {
+        'encodings': stored_encodings,
+        'photo_ids': photo_ids,
+        'photo_names': photo_names,
+        'timestamp': datetime.now()
+    }
+
+    with cache_lock:
+        encoding_cache[event_id] = cache_data
+        logger.info(f"Cached {len(photo_ids)} encodings for event {event_id}")
+
+    return cache_data
+
+def invalidate_cache(event_id):
+    """Invalidate cache when event is re-indexed"""
+    with cache_lock:
+        if event_id in encoding_cache:
+            del encoding_cache[event_id]
+            logger.info(f"Cache invalidated for event {event_id}")
+
 # Print configuration on startup
 def print_config():
     """Print face recognition configuration"""
@@ -361,357 +411,105 @@ def print_config():
     print(f"Num Jitters:  {FACE_RECOGNITION_CONFIG['num_jitters']}")
     print("="*50 + "\n")
 
-# --- Auto-Sync Configuration ---
-AUTO_SYNC_CONFIG = {
-    'default_interval_minutes': int(os.getenv('AUTO_SYNC_INTERVAL', '2')),  # Check every 2 minutes by default
-    'min_interval_seconds': 30,  # Minimum 30 seconds between checks
-}
-
-# Store for auto-sync threads
-auto_sync_threads = {}
-auto_sync_threads_lock = threading.Lock()
-
-# --- Drive Changes API Functions ---
-def get_start_page_token(drive_service, folder_id):
-    """Get the initial page token for tracking changes"""
+# --- Checkpoint Management Functions ---
+def ensure_checkpoint_table(db_conn):
+    """Ensure indexing_checkpoints table exists, create if missing (auto-migration)"""
     try:
-        # Get the start page token for the entire drive
-        response = drive_service.changes().getStartPageToken().execute()
-        start_page_token = response.get('startPageToken')
-        logger.info(f"Retrieved start page token: {start_page_token}")
-        return start_page_token
-    except Exception as e:
-        logger.error(f"Error getting start page token: {e}")
-        raise GoogleDriveError(f"Failed to get start page token: {e}")
+        # Check if table exists
+        cursor = db_conn.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='indexing_checkpoints'
+        """)
 
-def check_drive_changes(drive_service, folder_id, start_page_token):
-    """Check for new files in the folder since last sync
-
-    Returns:
-        tuple: (new_photos, new_page_token)
-        - new_photos: list of new photo files
-        - new_page_token: updated page token for next check
-    """
-    try:
-        new_photos = []
-        page_token = start_page_token
-
-        while page_token is not None:
-            # Get changes since last token
-            response = drive_service.changes().list(
-                pageToken=page_token,
-                spaces='drive',
-                fields='nextPageToken, newStartPageToken, changes(fileId, file(id, name, mimeType, parents, trashed))',
-                pageSize=100
-            ).execute()
-
-            # Process changes
-            for change in response.get('changes', []):
-                file_info = change.get('file')
-                if not file_info:
-                    continue
-
-                # Check if file is in our folder and is an image
-                parents = file_info.get('parents', [])
-                mime_type = file_info.get('mimeType', '')
-                is_trashed = file_info.get('trashed', False)
-
-                if (folder_id in parents and
-                    mime_type in ['image/jpeg', 'image/png', 'image/jpg'] and
-                    not is_trashed):
-
-                    new_photos.append({
-                        'id': file_info['id'],
-                        'name': file_info['name']
-                    })
-                    logger.debug(f"New photo detected: {file_info['name']}")
-
-            # Get next page token
-            page_token = response.get('nextPageToken')
-
-            # If no more pages, get the new start page token
-            if page_token is None:
-                new_start_page_token = response.get('newStartPageToken')
-                return new_photos, new_start_page_token
-
-        return new_photos, start_page_token
-
-    except HttpError as e:
-        if e.resp.status == 400:
-            # Invalid page token - need to reset
-            logger.warning("Invalid page token, resetting...")
-            return None, None
-        else:
-            logger.error(f"HTTP error checking changes: {e}")
-            raise GoogleDriveError(f"Failed to check drive changes: {e}")
-    except Exception as e:
-        logger.error(f"Error checking drive changes: {e}")
-        raise GoogleDriveError(f"Failed to check drive changes: {e}")
-
-def index_new_photos(event_id, new_photos, drive_service, db_conn):
-    """Index only new photos (incremental indexing)
-
-    Args:
-        event_id: Event ID
-        new_photos: List of new photo dicts with 'id' and 'name'
-        drive_service: Google Drive service
-        db_conn: Database connection
-
-    Returns:
-        tuple: (photos_indexed, faces_found)
-    """
-    photos_indexed = 0
-    faces_found = 0
-    temp_files = []
-
-    try:
-        for photo in new_photos:
-            photo_id = photo['id']
-            photo_name = photo['name']
-
-            # Check if already synced
-            existing = db_conn.execute(
-                'SELECT 1 FROM synced_photos WHERE event_id = ? AND photo_id = ?',
-                (event_id, photo_id)
-            ).fetchone()
-
-            if existing:
-                logger.debug(f"Photo {photo_name} already synced, skipping")
-                continue
-
-            try:
-                # Download image
-                temp_path = download_image_temp(drive_service, photo_id)
-                if not temp_path:
-                    logger.warning(f"Failed to download {photo_name}, skipping")
-                    continue
-
-                temp_files.append(temp_path)
-
-                # Extract faces
-                try:
-                    faces = extract_face_encodings(temp_path)
-                except ImageProcessingError as e:
-                    logger.warning(f"Skipping {photo_name}: {e}")
-                    # Mark as synced even if no faces found
-                    db_conn.execute(
-                        'INSERT INTO synced_photos (event_id, photo_id, photo_name) VALUES (?, ?, ?)',
-                        (event_id, photo_id, photo_name)
-                    )
-                    db_conn.commit()
-                    continue
-
-                if faces:
-                    logger.info(f"Found {len(faces)} face(s) in {photo_name}")
-                    for face_data in faces:
-                        encoding_blob = face_data['encoding'].tobytes()
-                        location_json = json.dumps(face_data['location'])
-
-                        db_conn.execute(
-                            'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
-                            (event_id, photo_id, photo_name, encoding_blob, location_json)
-                        )
-                        faces_found += 1
-
-                # Mark as synced
-                db_conn.execute(
-                    'INSERT INTO synced_photos (event_id, photo_id, photo_name) VALUES (?, ?, ?)',
-                    (event_id, photo_id, photo_name)
+        if not cursor.fetchone():
+            logger.info("Creating indexing_checkpoints table (auto-migration)...")
+            # Create the table
+            db_conn.execute("""
+                CREATE TABLE indexing_checkpoints (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_id TEXT NOT NULL,
+                    photo_id TEXT NOT NULL,
+                    photo_name TEXT NOT NULL,
+                    faces_found INTEGER DEFAULT 0,
+                    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
                 )
-                db_conn.commit()
-                photos_indexed += 1
+            """)
 
-            except Exception as e:
-                logger.error(f"Error processing {photo_name}: {e}")
-                continue
+            # Create indexes
+            db_conn.execute("""
+                CREATE INDEX idx_checkpoints_event ON indexing_checkpoints(event_id)
+            """)
 
-        # Update event stats
-        current_stats = db_conn.execute(
-            'SELECT indexed_photos, total_faces FROM events WHERE id = ?',
-            (event_id,)
-        ).fetchone()
+            db_conn.execute("""
+                CREATE INDEX idx_checkpoints_photo ON indexing_checkpoints(event_id, photo_id)
+            """)
 
-        if current_stats:
-            new_indexed = current_stats['indexed_photos'] + photos_indexed
-            new_total_faces = current_stats['total_faces'] + faces_found
-
-            db_conn.execute(
-                'UPDATE events SET indexed_photos = ?, total_faces = ?, last_sync_at = ? WHERE id = ?',
-                (new_indexed, new_total_faces, datetime.now(), event_id)
-            )
             db_conn.commit()
-
-        return photos_indexed, faces_found
-
-    finally:
-        # Clean up temp files
-        for temp_file in temp_files:
-            try:
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
-            except:
-                pass
-
-def run_auto_sync_loop(event_id, folder_id, credentials_dict, sync_interval_minutes):
-    """Background loop that checks for new photos and indexes them
-
-    This runs in a separate thread for each event with auto-sync enabled.
-    """
-    db_conn = sqlite3.connect(DATABASE)
-    db_conn.row_factory = sqlite3.Row
-
-    logger.info(f"Starting auto-sync loop for event {event_id} (interval: {sync_interval_minutes} min)")
-
-    try:
-        # Build Drive service
-        creds = Credentials(**credentials_dict)
-        drive_service = build('drive', 'v3', credentials=creds)
-
-        # Get initial page token if not exists
-        event_data = db_conn.execute(
-            'SELECT drive_start_page_token FROM events WHERE id = ?',
-            (event_id,)
-        ).fetchone()
-
-        page_token = event_data['drive_start_page_token']
-        if not page_token:
-            page_token = get_start_page_token(drive_service, folder_id)
-            db_conn.execute(
-                'UPDATE events SET drive_start_page_token = ? WHERE id = ?',
-                (page_token, event_id)
-            )
-            db_conn.commit()
-            logger.info(f"Initialized page token for event {event_id}: {page_token}")
-
-        # Main sync loop
-        while True:
-            # Check if auto-sync is still enabled
-            event_status = db_conn.execute(
-                'SELECT auto_sync_enabled FROM events WHERE id = ?',
-                (event_id,)
-            ).fetchone()
-
-            if not event_status or not event_status['auto_sync_enabled']:
-                logger.info(f"Auto-sync disabled for event {event_id}, stopping loop")
-                break
-
-            try:
-                # Check for changes
-                logger.debug(f"Checking for changes in event {event_id}...")
-                new_photos, new_page_token = check_drive_changes(drive_service, folder_id, page_token)
-
-                if new_page_token is None:
-                    # Invalid token, need to reset
-                    logger.warning(f"Resetting page token for event {event_id}")
-                    page_token = get_start_page_token(drive_service, folder_id)
-                    db_conn.execute(
-                        'UPDATE events SET drive_start_page_token = ? WHERE id = ?',
-                        (page_token, event_id)
-                    )
-                    db_conn.commit()
-                else:
-                    page_token = new_page_token
-                    db_conn.execute(
-                        'UPDATE events SET drive_start_page_token = ? WHERE id = ?',
-                        (page_token, event_id)
-                    )
-                    db_conn.commit()
-
-                if new_photos:
-                    logger.info(f"Found {len(new_photos)} new photo(s) for event {event_id}")
-                    photos_indexed, faces_found = index_new_photos(
-                        event_id, new_photos, drive_service, db_conn
-                    )
-                    logger.info(f"Auto-sync completed: {photos_indexed} photos, {faces_found} faces")
-                else:
-                    logger.debug(f"No new photos for event {event_id}")
-
-            except GoogleDriveError as e:
-                logger.error(f"Drive error in auto-sync loop for event {event_id}: {e}")
-                # Continue loop despite error
-            except Exception as e:
-                logger.error(f"Unexpected error in auto-sync loop for event {event_id}: {e}", exc_info=True)
-                # Continue loop despite error
-
-            # Sleep for the configured interval
-            import time
-            sleep_seconds = max(sync_interval_minutes * 60, AUTO_SYNC_CONFIG['min_interval_seconds'])
-            time.sleep(sleep_seconds)
-
-    except Exception as e:
-        logger.error(f"Fatal error in auto-sync loop for event {event_id}: {e}", exc_info=True)
-    finally:
-        db_conn.close()
-        # Remove thread from registry
-        with auto_sync_threads_lock:
-            if event_id in auto_sync_threads:
-                del auto_sync_threads[event_id]
-        logger.info(f"Auto-sync loop stopped for event {event_id}")
-
-def start_auto_sync(event_id, folder_id, credentials_dict, sync_interval_minutes=None):
-    """Start auto-sync background thread for an event"""
-    if sync_interval_minutes is None:
-        sync_interval_minutes = AUTO_SYNC_CONFIG['default_interval_minutes']
-
-    with auto_sync_threads_lock:
-        # Check if already running
-        if event_id in auto_sync_threads and auto_sync_threads[event_id].is_alive():
-            logger.warning(f"Auto-sync already running for event {event_id}")
-            return False
-
-        # Start new thread
-        thread = threading.Thread(
-            target=run_auto_sync_loop,
-            args=(event_id, folder_id, credentials_dict, sync_interval_minutes),
-            daemon=True
-        )
-        thread.start()
-        auto_sync_threads[event_id] = thread
-
-        logger.info(f"Started auto-sync thread for event {event_id}")
+            logger.info("✅ Successfully created indexing_checkpoints table - Resume feature is now available!")
+            return True
         return True
-
-def stop_auto_sync(event_id):
-    """Stop auto-sync for an event (it will stop on next check)"""
-    # Update database to disable auto-sync
-    # The thread will check this flag and stop itself
-    logger.info(f"Stopping auto-sync for event {event_id}")
-    return True
-
-def restore_auto_sync_on_startup():
-    """Restore auto-sync threads for events that had auto-sync enabled
-
-    This should be called on server startup to resume auto-sync
-    for events that were running before server restart.
-    """
-    logger.info("Restoring auto-sync threads on startup...")
-
-    # Note: We can't access session credentials here since this runs at startup
-    # Auto-sync will need to be manually re-enabled after server restart
-    # This is a limitation of using session-based credentials
-
-    # For now, we'll just log which events had auto-sync enabled
-    try:
-        db_conn = sqlite3.connect(DATABASE)
-        db_conn.row_factory = sqlite3.Row
-
-        events = db_conn.execute(
-            'SELECT id, name FROM events WHERE auto_sync_enabled = 1'
-        ).fetchall()
-
-        if events:
-            logger.info(f"Found {len(events)} event(s) with auto-sync enabled:")
-            for event in events:
-                logger.info(f"  - {event['name']} (ID: {event['id']})")
-            logger.warning("Auto-sync threads cannot be automatically restored due to session credentials.")
-            logger.warning("Photographer will need to re-enable auto-sync for these events after logging in.")
-        else:
-            logger.info("No events with auto-sync enabled")
-
-        db_conn.close()
-
     except Exception as e:
-        logger.error(f"Error restoring auto-sync on startup: {e}", exc_info=True)
+        logger.error(f"❌ Error ensuring checkpoint table: {e}")
+        return False
+
+def get_checkpoints(db_conn, event_id):
+    """Get all processed photo IDs from checkpoints for an event"""
+    try:
+        if not ensure_checkpoint_table(db_conn):
+            return {}
+
+        cursor = db_conn.execute(
+            'SELECT photo_id, photo_name, faces_found FROM indexing_checkpoints WHERE event_id = ?',
+            (event_id,)
+        )
+        checkpoints = cursor.fetchall()
+        processed_ids = {row['photo_id']: {'name': row['photo_name'], 'faces': row['faces_found']} for row in checkpoints}
+        return processed_ids
+    except Exception as e:
+        logger.warning(f"Error getting checkpoints: {e}. Continuing without resume functionality.")
+        return {}
+
+def save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_found):
+    """Save a checkpoint after processing a photo"""
+    try:
+        if not ensure_checkpoint_table(db_conn):
+            return
+
+        db_conn.execute(
+            'INSERT INTO indexing_checkpoints (event_id, photo_id, photo_name, faces_found) VALUES (?, ?, ?, ?)',
+            (event_id, photo_id, photo_name, faces_found)
+        )
+        db_conn.commit()
+    except Exception as e:
+        logger.warning(f"Failed to save checkpoint for {photo_name}: {e}")
+
+def clear_checkpoints(db_conn, event_id):
+    """Clear all checkpoints for an event (called on completion)"""
+    try:
+        if not ensure_checkpoint_table(db_conn):
+            return
+
+        db_conn.execute('DELETE FROM indexing_checkpoints WHERE event_id = ?', (event_id,))
+        db_conn.commit()
+        logger.info(f"Cleared checkpoints for event {event_id}")
+    except Exception as e:
+        logger.warning(f"Failed to clear checkpoints: {e}")
+
+def count_checkpoints(db_conn, event_id):
+    """Count number of checkpoints for an event"""
+    try:
+        if not ensure_checkpoint_table(db_conn):
+            return 0
+
+        cursor = db_conn.execute(
+            'SELECT COUNT(*) as count FROM indexing_checkpoints WHERE event_id = ?',
+            (event_id,)
+        )
+        return cursor.fetchone()['count']
+    except Exception as e:
+        logger.warning(f"Error counting checkpoints: {e}")
+        return 0
 
 # --- Background Task Management ---
 class Task:
@@ -1006,6 +804,19 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
         temp_files = []  # Track temp files for cleanup
 
         try:
+            # Check for existing checkpoints (resume functionality)
+            processed_photos = get_checkpoints(db_conn, event_id)
+            resuming = len(processed_photos) > 0
+
+            if resuming:
+                # Resume from previous progress
+                logger.info(f"Task {task.id}: Resuming from checkpoint - {len(processed_photos)} photos already processed")
+                # Count faces from checkpoints
+                total_faces = sum(p['faces'] for p in processed_photos.values())
+                indexed_photos = len(processed_photos)
+            else:
+                logger.info(f"Task {task.id}: Starting fresh indexing (no checkpoints found)")
+
             # Get all images from the folder
             query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
             results = drive_service.files().list(
@@ -1016,9 +827,12 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
             photos = results.get('files', [])
 
             total_photos = len(photos)
-            task.update_progress(0, total_photos, None, faces_found=0)
+            task.update_progress(indexed_photos, total_photos, None, faces_found=total_faces)
 
-            logger.info(f"Task {task.id}: Found {total_photos} photos to process")
+            if resuming:
+                logger.info(f"Task {task.id}: Found {total_photos} total photos ({len(processed_photos)} already done, {total_photos - len(processed_photos)} remaining)")
+            else:
+                logger.info(f"Task {task.id}: Found {total_photos} photos to process")
 
             # Process photos in batches
             batch_size = FACE_RECOGNITION_CONFIG['batch_size']
@@ -1030,10 +844,16 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
                     photo_id = photo['id']
                     photo_name = photo['name']
 
+                    # Skip if already processed (resume functionality)
+                    if photo_id in processed_photos:
+                        logger.debug(f"Task {task.id}: Skipping {photo_name} (already processed)")
+                        continue
+
                     # Update task progress
                     task.update_progress(indexed_photos, total_photos, photo_name, faces_found=total_faces)
                     logger.debug(f"Task {task.id}: Processing {photo_name}")
 
+                    faces_in_this_photo = 0
                     try:
                         # Download image to temp file
                         temp_path = download_image_temp(drive_service, photo_id)
@@ -1064,6 +884,7 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
                                     (event_id, photo_id, photo_name, encoding_blob, location_json)
                                 )
                                 total_faces += 1
+                                faces_in_this_photo += 1
                         else:
                             logger.debug(f"Task {task.id}: No faces found in {photo_name}")
 
@@ -1072,6 +893,9 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
                         # Continue with next photo
 
                     indexed_photos += 1
+
+                    # Save checkpoint for resume functionality
+                    save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_in_this_photo)
 
                     # Update database progress
                     db_conn.execute(
@@ -1087,8 +911,14 @@ def run_indexing_background(task, event_id, folder_id, credentials_dict):
             )
             db_conn.commit()
 
+            # Clear checkpoints on successful completion
+            clear_checkpoints(db_conn, event_id)
+
+            # Invalidate cache so next search will use fresh data
+            invalidate_cache(event_id)
+
             task.complete()
-            logger.info(f"Task {task.id}: Indexing completed. Photos: {indexed_photos}, Faces: {total_faces}")
+            logger.info(f"Task {task.id}: Indexing completed successfully. Photos: {indexed_photos}, Faces: {total_faces}")
 
         except HttpError as error:
             error_msg = f'Google Drive API error: {error}'
@@ -1128,7 +958,20 @@ def init_db_command():
 
 @app.route('/')
 def index():
-    return redirect(url_for('photographer_dashboard'))
+    """Landing page for public users"""
+    return render_template('index.html')
+
+@app.route('/events')
+def events_list():
+    """List all completed events for public users"""
+    db = get_db()
+    # Only show completed events to public
+    events_from_db = db.execute(
+        "SELECT * FROM events WHERE indexing_status = 'Completed' ORDER BY created_at DESC"
+    ).fetchall()
+
+    events = [dict(event) for event in events_from_db]
+    return render_template('events.html', events=events)
 
 @app.route('/dashboard/photographer')
 def photographer_dashboard():
@@ -1181,6 +1024,17 @@ def start_indexing(event_id):
         if not event_data:
             raise ValidationError('Event not found')
 
+        # Reset status if stuck (In Progress but no active task)
+        if event_data['indexing_status'] == 'In Progress':
+            task_id = event_data['task_id']
+            if task_id:
+                task = get_task(task_id)
+                if not task or task.status in ['completed', 'failed']:
+                    # Task is dead, reset to Failed so we can restart
+                    logger.info(f"Resetting stuck event {event_id} from 'In Progress' to 'Failed'")
+                    db.execute("UPDATE events SET indexing_status = 'Failed' WHERE id = ?", (event_id,))
+                    db.commit()
+
         if 'credentials' not in session:
             logger.warning("User not authenticated, redirecting to login")
             return redirect(url_for('login_temp'))
@@ -1205,6 +1059,9 @@ def start_indexing(event_id):
 
         # Create background task
         task = create_task('face_indexing')
+
+        # Invalidate cache before starting new indexing
+        invalidate_cache(event_id)
 
         # Update status to In Progress and save task_id
         db.execute(
@@ -1443,126 +1300,259 @@ def stream_event_task(event_id):
         }
     )
 
-@app.route('/api/event/<event_id>/auto-sync/enable', methods=['POST'])
-def enable_auto_sync(event_id):
-    """Enable auto-sync for an event"""
+@app.route('/api/event/<event_id>/checkpoint/status')
+def get_checkpoint_status(event_id):
+    """Get checkpoint status for an event (for resume indicator)"""
+    db = get_db()
     try:
-        # Validate event ID
+        checkpoint_count = count_checkpoints(db, event_id)
+        event_data = db.execute('SELECT indexing_status, task_id FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Check if event is stuck (In Progress but no active task)
+        is_stuck = False
+        if event_data['indexing_status'] == 'In Progress' and event_data['task_id']:
+            task = get_task(event_data['task_id'])
+            if not task or task.status in ['completed', 'failed']:
+                is_stuck = True
+
+        return jsonify({
+            'has_checkpoints': checkpoint_count > 0,
+            'checkpoint_count': checkpoint_count,
+            'indexing_status': event_data['indexing_status'],
+            'is_stuck': is_stuck,
+            'can_resume': checkpoint_count > 0 and event_data['indexing_status'] in ['Not Started', 'Failed']
+        })
+    except Exception as e:
+        logger.error(f"Error getting checkpoint status: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/reset_event/<event_id>', methods=['POST'])
+def reset_event(event_id):
+    """Reset a stuck event back to Failed status"""
+    try:
+        event_id = validate_event_id(event_id)
+        db = get_db()
+
+        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Reset to Failed so user can restart/resume
+        db.execute("UPDATE events SET indexing_status = 'Failed' WHERE id = ?", (event_id,))
+        db.commit()
+
+        logger.info(f"Manually reset event {event_id} to Failed status")
+        return redirect(url_for('photographer_dashboard'))
+
+    except Exception as e:
+        logger.error(f"Error resetting event: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/pause_indexing/<event_id>', methods=['POST'])
+def pause_indexing(event_id):
+    """Pause ongoing indexing task"""
+    try:
+        event_id = validate_event_id(event_id)
+        db = get_db()
+
+        event_data = db.execute('SELECT task_id FROM events WHERE id = ?', (event_id,)).fetchone()
+        if not event_data:
+            return jsonify({'error': 'Event not found'}), 404
+
+        # Mark task as failed to stop it
+        task_id = event_data['task_id']
+        if task_id:
+            task = get_task(task_id)
+            if task:
+                task.fail("Paused by user")
+
+        # Change status to Paused (keep checkpoint data)
+        db.execute("UPDATE events SET indexing_status = 'Paused' WHERE id = ?", (event_id,))
+        db.commit()
+
+        logger.info(f"Paused indexing for event {event_id}")
+        return redirect(url_for('photographer_dashboard'))
+
+    except Exception as e:
+        logger.error(f"Error pausing indexing: {e}")
+        return jsonify({'error': str(e)}), 500
+
+def ensure_drive_token_column(db_conn):
+    """Ensure drive_page_token column exists in events table"""
+    try:
+        cursor = db_conn.execute("PRAGMA table_info(events)")
+        columns = [column[1] for column in cursor.fetchall()]
+
+        if 'drive_page_token' not in columns:
+            logger.info("Adding drive_page_token column to events table (auto-migration)...")
+            db_conn.execute("ALTER TABLE events ADD COLUMN drive_page_token TEXT")
+            db_conn.commit()
+            logger.info("✅ Successfully added drive_page_token column")
+            return True
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error ensuring drive_page_token column: {e}")
+        return False
+
+@app.route('/api/event/<event_id>/new_photos')
+def check_new_photos(event_id):
+    """Check for new photos using Google Drive Changes API (much faster!)"""
+    try:
         event_id = validate_event_id(event_id)
 
-        # Check authentication
         if 'credentials' not in session:
             return jsonify({'error': 'Not authenticated'}), 401
 
-        # Get event data
         db = get_db()
-        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
 
-        if not event_data:
-            return jsonify({'error': 'Event not found'}), 404
+        # Ensure column exists
+        ensure_drive_token_column(db)
 
-        folder_id = event_data['drive_folder_id']
-        if not folder_id:
-            return jsonify({'error': 'No Google Drive folder linked'}), 400
-
-        # Get sync interval from request (optional)
-        data = request.get_json() or {}
-        sync_interval = data.get('interval_minutes', AUTO_SYNC_CONFIG['default_interval_minutes'])
-
-        # Validate interval
-        if sync_interval < 1:
-            return jsonify({'error': 'Interval must be at least 1 minute'}), 400
-
-        # Enable auto-sync in database
-        db.execute(
-            'UPDATE events SET auto_sync_enabled = 1, sync_interval_minutes = ? WHERE id = ?',
-            (sync_interval, event_id)
-        )
-        db.commit()
-
-        # Start auto-sync thread
-        credentials_dict = session['credentials']
-        success = start_auto_sync(event_id, folder_id, credentials_dict, sync_interval)
-
-        if success:
-            logger.info(f"Auto-sync enabled for event {event_id} with interval {sync_interval} minutes")
-            return jsonify({
-                'message': 'Auto-sync enabled',
-                'interval_minutes': sync_interval
-            }), 200
-        else:
-            return jsonify({'error': 'Auto-sync already running'}), 400
-
-    except ValidationError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error enabling auto-sync: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to enable auto-sync'}), 500
-
-@app.route('/api/event/<event_id>/auto-sync/disable', methods=['POST'])
-def disable_auto_sync(event_id):
-    """Disable auto-sync for an event"""
-    try:
-        # Validate event ID
-        event_id = validate_event_id(event_id)
-
-        # Get event data
-        db = get_db()
-        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
-
-        if not event_data:
-            return jsonify({'error': 'Event not found'}), 404
-
-        # Disable auto-sync in database
-        db.execute(
-            'UPDATE events SET auto_sync_enabled = 0 WHERE id = ?',
-            (event_id,)
-        )
-        db.commit()
-
-        stop_auto_sync(event_id)
-
-        logger.info(f"Auto-sync disabled for event {event_id}")
-        return jsonify({'message': 'Auto-sync disabled'}), 200
-
-    except ValidationError as e:
-        return jsonify({'error': str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error disabling auto-sync: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to disable auto-sync'}), 500
-
-@app.route('/api/event/<event_id>/auto-sync/status')
-def get_auto_sync_status(event_id):
-    """Get auto-sync status for an event"""
-    try:
-        # Validate event ID
-        event_id = validate_event_id(event_id)
-
-        db = get_db()
         event_data = db.execute(
-            'SELECT auto_sync_enabled, sync_interval_minutes, last_sync_at FROM events WHERE id = ?',
+            'SELECT drive_folder_id, drive_page_token, indexing_status FROM events WHERE id = ?',
             (event_id,)
         ).fetchone()
 
-        if not event_data:
-            return jsonify({'error': 'Event not found'}), 404
+        if not event_data or not event_data['drive_folder_id']:
+            return jsonify({'error': 'Event or folder not found'}), 404
 
-        # Check if thread is actually running
-        with auto_sync_threads_lock:
-            is_running = event_id in auto_sync_threads and auto_sync_threads[event_id].is_alive()
+        # Only check if indexing is completed or paused
+        if event_data['indexing_status'] not in ['Completed', 'Paused']:
+            return jsonify({'new_photos': 0, 'total_photos': 0})
+
+        # Build Google Drive service
+        credentials_dict = session['credentials']
+        creds = Credentials(**credentials_dict)
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        folder_id = event_data['drive_folder_id']
+        page_token = event_data['drive_page_token']
+
+        # Get indexed photo IDs from database
+        indexed_photos = db.execute(
+            'SELECT DISTINCT photo_id FROM faces WHERE event_id = ?',
+            (event_id,)
+        ).fetchall()
+        indexed_ids = {row['photo_id'] for row in indexed_photos}
+
+        # Also check checkpoints
+        checkpoints = db.execute(
+            'SELECT DISTINCT photo_id FROM indexing_checkpoints WHERE event_id = ?',
+            (event_id,)
+        ).fetchall()
+        checkpoint_ids = {row['photo_id'] for row in checkpoints}
+
+        processed_ids = indexed_ids | checkpoint_ids
+
+        # If no page token, initialize with current state
+        if not page_token:
+            logger.info(f"Initializing Drive Changes API for event {event_id}")
+            # Get start page token for this folder
+            response = drive_service.changes().getStartPageToken().execute()
+            new_page_token = response.get('startPageToken')
+
+            # Save token
+            db.execute(
+                'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                (new_page_token, event_id)
+            )
+            db.commit()
+
+            # First time: do full check
+            query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
+            results = drive_service.files().list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=1000
+            ).execute()
+            drive_photos = results.get('files', [])
+            new_photos = [photo for photo in drive_photos if photo['id'] not in processed_ids]
+
+            return jsonify({
+                'new_photos': len(new_photos),
+                'total_photos': len(drive_photos),
+                'indexed_photos': len(processed_ids),
+                'has_new': len(new_photos) > 0
+            })
+
+        # Use Changes API to get only changed files
+        logger.debug(f"Checking Drive changes for event {event_id} with token {page_token}")
+
+        new_photo_ids = set()
+        new_page_token = page_token
+
+        while True:
+            try:
+                response = drive_service.changes().list(
+                    pageToken=new_page_token,
+                    spaces='drive',
+                    fields='nextPageToken, newStartPageToken, changes(fileId, file(id, name, mimeType, parents, trashed))',
+                    includeRemoved=True
+                ).execute()
+
+                changes = response.get('changes', [])
+
+                # Filter for new images in our folder
+                for change in changes:
+                    file_info = change.get('file')
+                    if not file_info:
+                        continue
+
+                    # Check if it's an image in our folder
+                    if (file_info.get('mimeType') in ['image/jpeg', 'image/png', 'image/jpg'] and
+                        folder_id in file_info.get('parents', []) and
+                        not file_info.get('trashed', False)):
+
+                        file_id = file_info['id']
+                        # Check if not already processed
+                        if file_id not in processed_ids:
+                            new_photo_ids.add(file_id)
+
+                # Update token
+                if 'newStartPageToken' in response:
+                    new_page_token = response['newStartPageToken']
+                    break
+
+                new_page_token = response.get('nextPageToken')
+                if not new_page_token:
+                    break
+
+            except HttpError as e:
+                if e.resp.status == 400:
+                    # Token expired or invalid, reinitialize
+                    logger.warning(f"Page token invalid for event {event_id}, reinitializing...")
+                    response = drive_service.changes().getStartPageToken().execute()
+                    new_page_token = response.get('startPageToken')
+                    db.execute(
+                        'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                        (new_page_token, event_id)
+                    )
+                    db.commit()
+                    return jsonify({'new_photos': 0, 'total_photos': len(processed_ids), 'has_new': False})
+                raise
+
+        # Save new token
+        if new_page_token != page_token:
+            db.execute(
+                'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                (new_page_token, event_id)
+            )
+            db.commit()
+            logger.debug(f"Updated page token for event {event_id}")
 
         return jsonify({
-            'enabled': bool(event_data['auto_sync_enabled']),
-            'running': is_running,
-            'interval_minutes': event_data['sync_interval_minutes'] or AUTO_SYNC_CONFIG['default_interval_minutes'],
-            'last_sync_at': event_data['last_sync_at']
-        }), 200
+            'new_photos': len(new_photo_ids),
+            'total_photos': len(processed_ids) + len(new_photo_ids),
+            'indexed_photos': len(processed_ids),
+            'has_new': len(new_photo_ids) > 0
+        })
 
-    except ValidationError as e:
-        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        logger.error(f"Error getting auto-sync status: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to get auto-sync status'}), 500
+        logger.error(f"Error checking new photos: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/event/<event_id>')
 def event_page(event_id):
@@ -1572,6 +1562,11 @@ def event_page(event_id):
         return "Event not found.", 404
     # ส่ง event_id ไปให้ template ด้วย
     return render_template('event_page.html', event_name=event_data['name'], event_id=event_id)
+
+@app.route('/login')
+def login():
+    """Photographer login page"""
+    return render_template('login.html')
 
 @app.route('/login_temp')
 def login_temp():
@@ -1614,11 +1609,15 @@ def callback_temp():
     # แก้ให้ redirect ไปที่หน้า dashboard หลักเสมอหลัง login
     return redirect(url_for('photographer_dashboard'))
 
+@app.route('/logout')
+def logout():
+    """Logout route - clears session and redirects to landing page"""
+    session.clear()
+    logger.info("User logged out successfully")
+    return redirect(url_for('index'))
+
 @app.route('/search_faces/<event_id>', methods=['POST'])
 def search_faces(event_id):
-    import time
-    start_time = time.time()
-
     try:
         # Validate event ID
         event_id = validate_event_id(event_id)
@@ -1638,15 +1637,12 @@ def search_faces(event_id):
             if file and file.filename != '':
                 validate_image_file(file)
 
-        logger.info(f"[TIMING] Validation took: {time.time() - start_time:.2f}s")
-
         # Process uploaded images
         uploaded_encodings = []
         temp_files = []
 
         try:
             # Extract face encodings from uploaded images
-            extract_start = time.time()
             for file in files:
                 if file and file.filename != '':
                     # Save uploaded file to temp
@@ -1663,9 +1659,7 @@ def search_faces(event_id):
                             logger.debug(f"Found face in uploaded image: {file.filename}")
                     except ImageProcessingError as e:
                         logger.warning(f"Skipping {file.filename}: {e}")
-
-            logger.info(f"[TIMING] Face extraction (GPU) took: {time.time() - extract_start:.2f}s")
-
+        
             if not uploaded_encodings:
                 raise ValidationError("No faces detected in uploaded photos. Please try again with clear face photos")
 
@@ -1673,46 +1667,45 @@ def search_faces(event_id):
             search_encoding = create_average_encoding(uploaded_encodings)
             logger.info(f"Created average encoding from {len(uploaded_encodings)} face(s) for event {event_id}")
 
-            # Search in database
-            search_start = time.time()
-            db = get_db()
-            cursor = db.execute(
-                'SELECT photo_id, photo_name, face_encoding FROM faces WHERE event_id = ?',
-                (event_id,)
-            )
+            # Search in database - OPTIMIZED with cache + vectorized comparison
+            cache_data = get_cached_encodings(event_id)
 
-            matching_photos = {}  # Use dict to avoid duplicates
-            faces_checked = 0
+            if not cache_data:
+                logger.info(f"No faces found for event {event_id}")
+                matching_photos = {}
+                faces_checked = 0
+            else:
+                # Get data from cache (already in optimal format!)
+                stored_encodings = cache_data['encodings']
+                photo_ids = cache_data['photo_ids']
+                photo_names = cache_data['photo_names']
+                faces_checked = len(photo_ids)
 
-            for row in cursor:
-                photo_id = row['photo_id']
-                photo_name = row['photo_name']
+                # Vectorized distance calculation (10-50x faster than loop!)
+                distances = face_recognition.face_distance(stored_encodings, search_encoding)
 
-                # Convert blob back to numpy array
-                stored_encoding = np.frombuffer(row['face_encoding'], dtype=np.float64)
+                # Find matches
+                matching_photos = {}
+                tolerance = FACE_RECOGNITION_CONFIG['tolerance']
 
-                # Calculate face distance
-                distance = face_recognition.face_distance([stored_encoding], search_encoding)[0]
+                for idx, distance in enumerate(distances):
+                    if distance <= tolerance:
+                        photo_id = photo_ids[idx]
+                        photo_name = photo_names[idx]
 
-                # Check if match (lower distance = better match)
-                if distance <= FACE_RECOGNITION_CONFIG['tolerance']:
-                    if photo_id not in matching_photos:
-                        matching_photos[photo_id] = {
-                            'name': photo_name,
-                            'distance': distance
-                        }
-                    else:
-                        # Keep the best match for each photo
-                        if distance < matching_photos[photo_id]['distance']:
-                            matching_photos[photo_id]['distance'] = distance
+                        # Keep best match for each photo
+                        if photo_id not in matching_photos:
+                            matching_photos[photo_id] = {
+                                'name': photo_name,
+                                'distance': float(distance)
+                            }
+                        else:
+                            if distance < matching_photos[photo_id]['distance']:
+                                matching_photos[photo_id]['distance'] = float(distance)
 
-                    logger.debug(f"Match found: {photo_name} (distance: {distance:.3f})")
+                        logger.debug(f"Match found: {photo_name} (distance: {distance:.3f})")
 
-                faces_checked += 1
-
-            logger.info(f"[TIMING] Database search took: {time.time() - search_start:.2f}s")
-            logger.info(f"Search completed for event {event_id}: Checked {faces_checked} faces, found {len(matching_photos)} matching photos")
-            logger.info(f"[TIMING] TOTAL TIME: {time.time() - start_time:.2f}s")
+            logger.info(f"Search completed for event {event_id}: Checked {faces_checked} faces, found {len(matching_photos)} matching photos (cached + vectorized)")
 
             # Convert to Google Drive links
             photo_links = []
@@ -1756,9 +1749,21 @@ def search_faces(event_id):
         logger.error(f"Error in search_faces: {e}", exc_info=True)
         return "Failed to search faces", 500
 
+# Error Handlers
+@app.errorhandler(404)
+def page_not_found(e):
+    """Handle 404 errors with custom page"""
+    logger.warning(f"404 error: {request.url}")
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    """Handle 500 errors with custom page"""
+    logger.error(f"500 error: {str(e)}", exc_info=True)
+    return render_template('500.html'), 500
+
 if __name__ == '__main__':
     print_config()
-    restore_auto_sync_on_startup()
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', '5000'))
     debug = os.getenv('DEBUG', 'True').lower() == 'true'
