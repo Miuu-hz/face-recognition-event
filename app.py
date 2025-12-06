@@ -1478,7 +1478,7 @@ def search_faces(event_id):
             if file and file.filename != '':
                 validate_image_file(file)
 
-        logger.info(f"⏱️  Validation took: {time.time() - start_time:.2f}s")
+        logger.info(f"[TIMING] Validation took: {time.time() - start_time:.2f}s")
 
         # Process uploaded images
         uploaded_encodings = []
@@ -1504,7 +1504,7 @@ def search_faces(event_id):
                     except ImageProcessingError as e:
                         logger.warning(f"Skipping {file.filename}: {e}")
 
-            logger.info(f"⏱️  Face extraction (GPU) took: {time.time() - extract_start:.2f}s")
+            logger.info(f"[TIMING] Face extraction (GPU) took: {time.time() - extract_start:.2f}s")
 
             if not uploaded_encodings:
                 raise ValidationError("No faces detected in uploaded photos. Please try again with clear face photos")
@@ -1550,9 +1550,9 @@ def search_faces(event_id):
 
                 faces_checked += 1
 
-            logger.info(f"⏱️  Database search took: {time.time() - search_start:.2f}s")
+            logger.info(f"[TIMING] Database search took: {time.time() - search_start:.2f}s")
             logger.info(f"Search completed for event {event_id}: Checked {faces_checked} faces, found {len(matching_photos)} matching photos")
-            logger.info(f"⏱️  TOTAL TIME: {time.time() - start_time:.2f}s")
+            logger.info(f"[TIMING] TOTAL TIME: {time.time() - start_time:.2f}s")
 
             # Convert to Google Drive links
             photo_links = []
