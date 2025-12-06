@@ -1455,6 +1455,9 @@ def callback_temp():
 
 @app.route('/search_faces/<event_id>', methods=['POST'])
 def search_faces(event_id):
+    import time
+    start_time = time.time()
+
     try:
         # Validate event ID
         event_id = validate_event_id(event_id)
@@ -1474,12 +1477,15 @@ def search_faces(event_id):
             if file and file.filename != '':
                 validate_image_file(file)
 
+        logger.info(f"⏱️  Validation took: {time.time() - start_time:.2f}s")
+
         # Process uploaded images
         uploaded_encodings = []
         temp_files = []
 
         try:
             # Extract face encodings from uploaded images
+            extract_start = time.time()
             for file in files:
                 if file and file.filename != '':
                     # Save uploaded file to temp
@@ -1496,7 +1502,9 @@ def search_faces(event_id):
                             logger.debug(f"Found face in uploaded image: {file.filename}")
                     except ImageProcessingError as e:
                         logger.warning(f"Skipping {file.filename}: {e}")
-        
+
+            logger.info(f"⏱️  Face extraction (GPU) took: {time.time() - extract_start:.2f}s")
+
             if not uploaded_encodings:
                 raise ValidationError("No faces detected in uploaded photos. Please try again with clear face photos")
 
@@ -1505,6 +1513,7 @@ def search_faces(event_id):
             logger.info(f"Created average encoding from {len(uploaded_encodings)} face(s) for event {event_id}")
 
             # Search in database
+            search_start = time.time()
             db = get_db()
             cursor = db.execute(
                 'SELECT photo_id, photo_name, face_encoding FROM faces WHERE event_id = ?',
@@ -1540,7 +1549,9 @@ def search_faces(event_id):
 
                 faces_checked += 1
 
+            logger.info(f"⏱️  Database search took: {time.time() - search_start:.2f}s")
             logger.info(f"Search completed for event {event_id}: Checked {faces_checked} faces, found {len(matching_photos)} matching photos")
+            logger.info(f"⏱️  TOTAL TIME: {time.time() - start_time:.2f}s")
 
             # Convert to Google Drive links
             photo_links = []
