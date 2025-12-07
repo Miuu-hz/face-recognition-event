@@ -146,36 +146,139 @@
             color: var(--text-primary);
         }
 
+        /* Drag & Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border-primary);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            background: var(--bg-secondary);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--accent-indigo);
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+        }
+
+        .drop-zone-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .drop-zone-icon {
+            width: 48px;
+            height: 48px;
+            color: var(--accent-indigo);
+        }
+
+        .drop-zone-text {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .drop-zone-hint {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
         .file-input-wrapper {
             position: relative;
             margin-bottom: 1rem;
         }
 
         input[type="file"] {
-            width: 100%;
-            padding: 1rem;
-            background: var(--bg-secondary);
-            border: 2px dashed var(--border-primary);
+            display: none;
+        }
+
+        /* Image Preview Grid */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .preview-item {
+            position: relative;
+            aspect-ratio: 1;
             border-radius: 0.75rem;
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.3s ease;
+            overflow: hidden;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-primary);
         }
 
-        input[type="file"]:hover {
-            border-color: var(--accent-indigo);
-            background: rgba(99, 102, 241, 0.1);
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        input[type="file"]::file-selector-button {
-            padding: 0.5rem 1rem;
-            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+        .preview-remove {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(239, 68, 68, 0.9);
             color: white;
             border: none;
-            border-radius: 0.5rem;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
             cursor: pointer;
-            font-weight: 600;
-            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .preview-remove:hover {
+            background: rgb(239, 68, 68);
+            transform: scale(1.1);
+        }
+
+        .preview-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: white;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        /* Validation Messages */
+        .validation-message {
+            display: none;
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .validation-message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgb(239, 68, 68);
+            color: rgb(239, 68, 68);
+            display: block;
+        }
+
+        .validation-message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            display: block;
         }
 
         .upload-hint {
@@ -188,6 +291,7 @@
             background: rgba(99, 102, 241, 0.1);
             border-radius: 0.5rem;
             border-left: 3px solid var(--accent-indigo);
+            margin-top: 1rem;
         }
 
         /* Submit Button */
@@ -281,19 +385,39 @@
             <h1>{{ event_name }}</h1>
             <p class="subtitle">Upload clear photos of your face to find all your pictures from the event</p>
 
-            <form action="{{ url_for('search_faces', event_id=event_id) }}" method="post" enctype="multipart/form-data">
+            <form action="{{ url_for('search_faces', event_id=event_id) }}" method="post" enctype="multipart/form-data" id="uploadForm">
                 <div class="upload-section">
                     <label for="selfie_images" class="upload-label">
                         📸 Upload Your Photos
                     </label>
+
+                    <!-- Drag & Drop Zone -->
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-content">
+                            <svg class="drop-zone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <div class="drop-zone-text">Drag & Drop your photos here</div>
+                            <div class="drop-zone-hint">or click to browse (max 3 photos, 10MB each)</div>
+                        </div>
+                    </div>
+
                     <div class="file-input-wrapper">
                         <input type="file"
                             id="selfie_images"
                             name="selfie_images"
-                            accept="image/*"
-                            multiple
-                            required>
+                            accept="image/jpeg,image/jpg,image/png"
+                            multiple>
                     </div>
+
+                    <!-- Validation Message -->
+                    <div id="validationMessage" class="validation-message"></div>
+
+                    <!-- Image Preview Grid -->
+                    <div id="previewGrid" class="preview-grid"></div>
+
                     <div class="upload-hint">
                         <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
@@ -304,7 +428,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-submit">
+                <button type="submit" class="btn-submit" id="submitBtn" disabled>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
@@ -312,6 +436,162 @@
                     Find My Photos
                 </button>
             </form>
+
+            <script>
+                // File validation constants
+                const MAX_FILES = 3;
+                const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+                const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+
+                let selectedFiles = [];
+
+                const dropZone = document.getElementById('dropZone');
+                const fileInput = document.getElementById('selfie_images');
+                const previewGrid = document.getElementById('previewGrid');
+                const validationMessage = document.getElementById('validationMessage');
+                const submitBtn = document.getElementById('submitBtn');
+                const form = document.getElementById('uploadForm');
+
+                // Click to upload
+                dropZone.addEventListener('click', () => fileInput.click());
+
+                // Drag & Drop events
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('dragover');
+                });
+
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('dragover');
+                });
+
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('dragover');
+                    handleFiles(e.dataTransfer.files);
+                });
+
+                // File input change
+                fileInput.addEventListener('change', (e) => {
+                    handleFiles(e.target.files);
+                });
+
+                function handleFiles(files) {
+                    const fileArray = Array.from(files);
+
+                    // Validate files
+                    const validation = validateFiles(fileArray);
+                    if (!validation.valid) {
+                        showValidation(validation.message, 'error');
+                        return;
+                    }
+
+                    // Add new files (up to MAX_FILES total)
+                    const remainingSlots = MAX_FILES - selectedFiles.length;
+                    const filesToAdd = fileArray.slice(0, remainingSlots);
+
+                    selectedFiles.push(...filesToAdd);
+
+                    if (fileArray.length > remainingSlots) {
+                        showValidation(`Only ${remainingSlots} more photo(s) can be added (max ${MAX_FILES} total)`, 'error');
+                    } else {
+                        showValidation(`${filesToAdd.length} photo(s) added successfully!`, 'success');
+                    }
+
+                    updatePreview();
+                    updateSubmitButton();
+                }
+
+                function validateFiles(files) {
+                    // Check file count
+                    if (selectedFiles.length + files.length > MAX_FILES) {
+                        return { valid: false, message: `Maximum ${MAX_FILES} photos allowed` };
+                    }
+
+                    // Validate each file
+                    for (let file of files) {
+                        // Check file type
+                        if (!ALLOWED_TYPES.includes(file.type)) {
+                            return { valid: false, message: `Invalid file type: ${file.name}. Only JPG and PNG allowed.` };
+                        }
+
+                        // Check file size
+                        if (file.size > MAX_FILE_SIZE) {
+                            return { valid: false, message: `File too large: ${file.name}. Max size is 10MB.` };
+                        }
+                    }
+
+                    return { valid: true };
+                }
+
+                function showValidation(message, type) {
+                    validationMessage.textContent = message;
+                    validationMessage.className = `validation-message ${type}`;
+
+                    if (type === 'success') {
+                        setTimeout(() => {
+                            validationMessage.className = 'validation-message';
+                        }, 3000);
+                    }
+                }
+
+                function updatePreview() {
+                    previewGrid.innerHTML = '';
+
+                    selectedFiles.forEach((file, index) => {
+                        const reader = new FileReader();
+
+                        reader.onload = (e) => {
+                            const previewItem = document.createElement('div');
+                            previewItem.className = 'preview-item';
+                            previewItem.innerHTML = `
+                                <img src="${e.target.result}" alt="${file.name}">
+                                <button type="button" class="preview-remove" onclick="removeFile(${index})">&times;</button>
+                                <div class="preview-name">${file.name}</div>
+                            `;
+                            previewGrid.appendChild(previewItem);
+                        };
+
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                function removeFile(index) {
+                    selectedFiles.splice(index, 1);
+                    updatePreview();
+                    updateSubmitButton();
+                    showValidation('Photo removed', 'success');
+                }
+
+                function updateSubmitButton() {
+                    if (selectedFiles.length > 0) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                        submitBtn.style.cursor = 'pointer';
+                    } else {
+                        submitBtn.disabled = true;
+                        submitBtn.style.opacity = '0.5';
+                        submitBtn.style.cursor = 'not-allowed';
+                    }
+                }
+
+                // Form submission - transfer files to input
+                form.addEventListener('submit', (e) => {
+                    if (selectedFiles.length === 0) {
+                        e.preventDefault();
+                        showValidation('Please select at least one photo', 'error');
+                        return;
+                    }
+
+                    // Create new DataTransfer to set files
+                    const dataTransfer = new DataTransfer();
+                    selectedFiles.forEach(file => dataTransfer.items.add(file));
+                    fileInput.files = dataTransfer.files;
+                });
+
+                // Initial state
+                updateSubmitButton();
+            </script>
 
             <div class="features">
                 <div class="feature-item">
