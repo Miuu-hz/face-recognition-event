@@ -1046,10 +1046,9 @@
                     sharedWithMe: true
                 }));
 
-                // Combine both and update MOCK_FILES in CloudDrive Picker
-                const allFolders = [...formattedMyDrive, ...formattedShared];
+                // ส่งข้อมูลแยกกัน 2 arrays ไปยัง CloudDrive Picker
                 if (window.updateCloudPickerFiles) {
-                    window.updateCloudPickerFiles(allFolders);
+                    window.updateCloudPickerFiles(formattedMyDrive, formattedShared);
                 }
 
             } catch (error) {

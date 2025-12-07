@@ -747,83 +747,9 @@
 </div>
 
 <script>
-// Mock Data
-const MOCK_FILES = [
-    {
-        id: 'folder-1',
-        name: 'Event Photos 2024',
-        type: 'folder',
-        owner: 'คุณสมชาย',
-        modifiedAt: '15 พ.ย. 2024',
-        parentId: null
-    },
-    {
-        id: 'folder-2',
-        name: 'Wedding Photos',
-        type: 'folder',
-        owner: 'คุณสมหญิง',
-        modifiedAt: '10 พ.ย. 2024',
-        parentId: null
-    },
-    {
-        id: 'folder-3',
-        name: 'Corporate Events',
-        type: 'folder',
-        owner: 'คุณสมศักดิ์',
-        modifiedAt: '5 พ.ย. 2024',
-        parentId: null
-    },
-    {
-        id: 'img-1',
-        name: 'IMG_001.jpg',
-        type: 'image',
-        size: '2.5 MB',
-        owner: 'คุณสมชาย',
-        modifiedAt: '15 พ.ย. 2024',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=200',
-        parentId: 'folder-1'
-    },
-    {
-        id: 'img-2',
-        name: 'IMG_002.jpg',
-        type: 'image',
-        size: '3.1 MB',
-        owner: 'คุณสมชาย',
-        modifiedAt: '15 พ.ย. 2024',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200',
-        parentId: 'folder-1'
-    },
-    {
-        id: 'img-3',
-        name: 'IMG_003.jpg',
-        type: 'image',
-        size: '2.8 MB',
-        owner: 'คุณสมชาย',
-        modifiedAt: '15 พ.ย. 2024',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=200',
-        parentId: 'folder-1'
-    },
-    {
-        id: 'img-4',
-        name: 'IMG_004.jpg',
-        type: 'image',
-        size: '4.2 MB',
-        owner: 'คุณสมชาย',
-        modifiedAt: '15 พ.ย. 2024',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?w=200',
-        parentId: 'folder-1'
-    },
-    {
-        id: 'img-5',
-        name: 'IMG_005.jpg',
-        type: 'image',
-        size: '3.5 MB',
-        owner: 'คุณสมชาย',
-        modifiedAt: '14 พ.ย. 2024',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=200',
-        parentId: 'folder-1'
-    }
-];
+// Data Storage - แยกเป็น 2 arrays
+let myDriveFolders = [];
+let sharedDriveFolders = [];
 
 // State
 const state = {
@@ -861,7 +787,9 @@ function getFileIconSVG(type) {
 
 // Get folder preview images
 function getFolderPreview(folderId) {
-    const images = MOCK_FILES.filter(f => f.parentId === folderId && f.type === 'image');
+    // รวม 2 arrays เพื่อหารูปใน folder
+    const allFiles = [...myDriveFolders, ...sharedDriveFolders];
+    const images = allFiles.filter(f => f.parentId === folderId && f.type === 'image');
     return {
         thumbnails: images.slice(0, 4).map(f => f.thumbnailUrl || ''),
         totalCount: images.length
@@ -870,15 +798,9 @@ function getFolderPreview(folderId) {
 
 // Filter files
 function getFilteredFiles() {
-    let files = MOCK_FILES;
+    // เลือก source จาก array ที่ถูกต้องตาม category
+    let files = state.category === 'myDrive' ? myDriveFolders : sharedDriveFolders;
     const searchTerm = state.searchTerm.trim().toLowerCase();
-
-    // Filter by category
-    if (state.category === 'myDrive') {
-        files = files.filter(f => !f.sharedWithMe);
-    } else {
-        files = files.filter(f => f.sharedWithMe);
-    }
 
     if (searchTerm) {
         files = files.filter(f => f.name.toLowerCase().includes(searchTerm));
@@ -1150,7 +1072,9 @@ function closePicker() {
 
 // Handle select
 function handleSelect() {
-    const selectedFiles = MOCK_FILES.filter(f => state.selectedIds.has(f.id));
+    // ค้นหาจาก array ที่ถูกต้องตาม category
+    const sourceArray = state.category === 'myDrive' ? myDriveFolders : sharedDriveFolders;
+    const selectedFiles = sourceArray.filter(f => state.selectedIds.has(f.id));
     console.log('Selected files:', selectedFiles);
 
     // Call callback if provided
@@ -1232,10 +1156,10 @@ document.getElementById('sharedBtn').addEventListener('click', () => {
 });
 
 // Update files dynamically (for API integration)
-function updateCloudPickerFiles(files) {
-    // Replace MOCK_FILES with real data
-    MOCK_FILES.length = 0;
-    MOCK_FILES.push(...files);
+function updateCloudPickerFiles(myDrive, sharedDrive) {
+    // รับ 2 arrays แยกกัน
+    myDriveFolders = myDrive || [];
+    sharedDriveFolders = sharedDrive || [];
 }
 
 // Export functions
