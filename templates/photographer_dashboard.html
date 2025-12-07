@@ -1009,23 +1009,47 @@
                     return;
                 }
 
-                // Fetch folders
+                // Fetch folders from My Drive
                 const foldersResponse = await fetch(`/api/folders`);
                 const folders = await foldersResponse.json();
 
-                // Convert to CloudDrive Picker format
-                const formattedFolders = folders.map(folder => ({
+                // Fetch shared folders (if API exists)
+                let sharedFolders = [];
+                try {
+                    const sharedResponse = await fetch(`/api/shared_folders`);
+                    if (sharedResponse.ok) {
+                        sharedFolders = await sharedResponse.json();
+                    }
+                } catch (e) {
+                    console.log('Shared folders API not available, skipping...');
+                }
+
+                // Convert My Drive folders to CloudDrive Picker format
+                const formattedMyDrive = folders.map(folder => ({
                     id: folder.id,
                     name: folder.name,
                     type: 'folder',
-                    owner: 'My Drive',
+                    owner: 'ฉัน',
                     modifiedAt: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
-                    parentId: null
+                    parentId: null,
+                    sharedWithMe: false
                 }));
 
-                // Update MOCK_FILES in CloudDrive Picker
+                // Convert Shared folders to CloudDrive Picker format
+                const formattedShared = sharedFolders.map(folder => ({
+                    id: folder.id,
+                    name: folder.name,
+                    type: 'folder',
+                    owner: folder.owner || 'แชร์กับฉัน',
+                    modifiedAt: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
+                    parentId: null,
+                    sharedWithMe: true
+                }));
+
+                // Combine both and update MOCK_FILES in CloudDrive Picker
+                const allFolders = [...formattedMyDrive, ...formattedShared];
                 if (window.updateCloudPickerFiles) {
-                    window.updateCloudPickerFiles(formattedFolders);
+                    window.updateCloudPickerFiles(allFolders);
                 }
 
             } catch (error) {

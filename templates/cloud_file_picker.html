@@ -226,11 +226,64 @@
             color: #6366f1;
         }
 
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            border-right: 1px solid var(--border-primary);
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(20px);
+            padding: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-item {
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            text-align: left;
+            width: 100%;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-item:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: #e2e8f0;
+        }
+
+        .sidebar-item.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #6366f1;
+            border-left-color: #6366f1;
+        }
+
+        .sidebar-icon {
+            width: 20px;
+            height: 20px;
+        }
+
         /* Content Area */
         .modal-content {
             flex: 1;
             overflow-y: auto;
             padding: 1.5rem;
+            /* Hide scrollbar but keep functionality */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        .modal-content::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
         }
 
         .empty-state {
@@ -262,8 +315,20 @@
         /* Grid View */
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .file-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .file-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         /* List View */
@@ -640,20 +705,40 @@
             </div>
         </div>
 
-        <!-- Content -->
-        <div class="modal-content">
-            <div id="fileContainer" class="file-grid">
-                <!-- Files will be inserted here -->
+        <!-- Main Body with Sidebar -->
+        <div style="display: flex; flex: 1; overflow: hidden;">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <button class="sidebar-item active" id="myDriveBtn">
+                    <svg class="sidebar-icon">
+                        <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+                    </svg>
+                    <span>My Drive</span>
+                </button>
+                <button class="sidebar-item" id="sharedBtn">
+                    <svg class="sidebar-icon">
+                        <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        <rect width="20" height="14" x="2" y="6" rx="2"></rect>
+                    </svg>
+                    <span>Shared with me</span>
+                </button>
             </div>
 
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <div class="empty-icon-wrapper">
-                    <svg style="width: 40px; height: 40px; color: #475569;">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                        <path d="M2 13h20"></path>
-                    </svg>
+            <!-- Content -->
+            <div class="modal-content">
+                <div id="fileContainer" class="file-grid">
+                    <!-- Files will be inserted here -->
                 </div>
-                <p class="empty-text" id="emptyText">โฟลเดอร์ว่างเปล่า</p>
+
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <div class="empty-icon-wrapper">
+                        <svg style="width: 40px; height: 40px; color: #475569;">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                            <path d="M2 13h20"></path>
+                        </svg>
+                    </div>
+                    <p class="empty-text" id="emptyText">โฟลเดอร์ว่างเปล่า</p>
+                </div>
             </div>
         </div>
 
@@ -764,7 +849,8 @@ const state = {
     viewMode: 'grid',
     searchTerm: '',
     selectFoldersOnly: true,
-    maxSelections: 1
+    maxSelections: 1,
+    category: 'myDrive' // 'myDrive' or 'shared'
 };
 
 // Get file icon SVG
@@ -803,6 +889,13 @@ function getFolderPreview(folderId) {
 function getFilteredFiles() {
     let files = MOCK_FILES;
     const searchTerm = state.searchTerm.trim().toLowerCase();
+
+    // Filter by category
+    if (state.category === 'myDrive') {
+        files = files.filter(f => !f.sharedWithMe);
+    } else {
+        files = files.filter(f => f.sharedWithMe);
+    }
 
     if (searchTerm) {
         files = files.filter(f => f.name.toLowerCase().includes(searchTerm));
@@ -1146,6 +1239,31 @@ document.getElementById('cloudPicker').addEventListener('click', (e) => {
     if (e.target.id === 'cloudPicker') {
         closePicker();
     }
+});
+
+// Sidebar category switching
+document.getElementById('myDriveBtn').addEventListener('click', () => {
+    state.category = 'myDrive';
+    state.currentPath = [{ id: null, name: 'My Drive' }];
+    state.selectedIds.clear();
+
+    // Update active state
+    document.getElementById('myDriveBtn').classList.add('active');
+    document.getElementById('sharedBtn').classList.remove('active');
+
+    render();
+});
+
+document.getElementById('sharedBtn').addEventListener('click', () => {
+    state.category = 'shared';
+    state.currentPath = [{ id: null, name: 'Shared with me' }];
+    state.selectedIds.clear();
+
+    // Update active state
+    document.getElementById('sharedBtn').classList.add('active');
+    document.getElementById('myDriveBtn').classList.remove('active');
+
+    render();
 });
 
 // Update files dynamically (for API integration)
