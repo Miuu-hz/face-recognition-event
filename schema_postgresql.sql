@@ -1,7 +1,9 @@
+-- PostgreSQL Schema for Face Recognition Event System
+
 -- Drop existing tables if they exist
-DROP TABLE IF EXISTS indexing_checkpoints;
-DROP TABLE IF EXISTS faces;
-DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS indexing_checkpoints CASCADE;
+DROP TABLE IF EXISTS faces CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
 
 -- Events table
 CREATE TABLE events (
@@ -20,11 +22,11 @@ CREATE TABLE events (
 
 -- Faces table with face encodings
 CREATE TABLE faces (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     event_id TEXT NOT NULL,
     photo_id TEXT NOT NULL,
     photo_name TEXT,
-    face_encoding BLOB NOT NULL,
+    face_encoding BYTEA NOT NULL,
     face_location TEXT,
     indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
@@ -37,7 +39,7 @@ CREATE INDEX idx_faces_event_indexed ON faces(event_id, indexed_at);  -- Composi
 
 -- Indexing checkpoints for resume functionality
 CREATE TABLE indexing_checkpoints (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     event_id TEXT NOT NULL,
     photo_id TEXT NOT NULL,
     photo_name TEXT NOT NULL,

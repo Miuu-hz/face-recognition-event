@@ -1,0 +1,5 @@
+# PostgreSQL support dependencies
+# Install these if you want to use PostgreSQL instead of SQLite
+
+psycopg2-binary==2.9.9
+# or use psycopg2 if you want to compile from source (faster but requires build tools)

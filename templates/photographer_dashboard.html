@@ -827,11 +827,11 @@
                                                 <strong>📸 New Photos Detected!</strong>
                                                 <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
                                                     <span id="new-photos-count-{{ event.id }}"></span> new photos found in Google Drive.
-                                                    Click below to index them.
+                                                    Click below to index them (fast - incremental only!).
                                                 </p>
                                             </div>
-                                            <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">
-                                                🔄 Index New Photos
+                                            <a href="{{ url_for('start_incremental_indexing', event_id=event.id) }}" class="btn btn-secondary">
+                                                ⚡ Index New Photos Only
                                             </a>
                                         </div>
                                     {% elif event.indexing_status == 'Failed' %}
@@ -861,38 +861,8 @@
         </div>
     </div>
 
-    <!-- Folder Selection Modal -->
-    <div id="folderModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Select Folder</h3>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div id="folderOptions">
-                    <h4 style="color: var(--primary-brown); margin-bottom: 1rem;">📁 Choose from your folders:</h4>
-                    <ul id="folderList" class="folder-list">
-                        <li class="folder-item">
-                            <div style="padding: 2rem; text-align: center; color: var(--warm-gray);">
-                                <span class="loading"></span> Loading folders...
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-                
-                <div class="paste-section">
-                    <h4 style="color: var(--primary-brown); margin-bottom: 1rem;">🔗 Or paste a Google Drive folder link:</h4>
-                    <form id="pasteForm" class="paste-form" onsubmit="return validateFolderLink(event)">
-                        <div style="flex: 1;">
-                            <input type="url" id="folderLink" placeholder="https://drive.google.com/drive/folders/..." required>
-                            <small class="error-message" id="folder_link_error" style="color: #dc3545; display: none; margin-top: 5px;"></small>
-                        </div>
-                        <button type="submit" class="btn btn-secondary" id="useLinkBtn">Use Link</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- CloudDrive Picker Modal -->
+    {% include 'cloud_file_picker.html' %}
 
     <script>
         let currentEventId = '';
@@ -1015,111 +985,63 @@
             }, 300);
         }
 
-        // Modal functionality
-        const modal = document.getElementById('folderModal');
-        const closeBtn = document.getElementsByClassName('close')[0];
-        
+        // CloudDrive Picker Integration
         function openFolderModal(eventId, eventName) {
             currentEventId = eventId;
-            document.getElementById('modalTitle').textContent = `Select Folder for '${eventName}'`;
-            modal.style.display = 'block';
-            loadFolders();
+
+            // Load folders from API and open picker
+            loadGoogleDriveFolders().then(() => {
+                window.CloudPicker.open({
+                    selectFoldersOnly: true,
+                    maxSelections: 1
+                });
+            });
         }
-        
-        closeBtn.onclick = function() {
-            modal.style.display = 'none';
-        }
-        
-        window.onclick = function(event) {
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        }
-        
-        // Load folders dynamically
-        async function loadFolders() {
-            const folderList = document.getElementById('folderList');
-            
+
+        // Load folders from Google Drive API
+        async function loadGoogleDriveFolders() {
             try {
                 // Check if user is logged in first
-                const response = await fetch(`/api/check_auth`);
-                if (!response.ok) {
+                const authResponse = await fetch(`/api/check_auth`);
+                if (!authResponse.ok) {
                     // Redirect to login if not authenticated
                     window.location.href = '/login_temp';
                     return;
                 }
-                
+
                 // Fetch folders
                 const foldersResponse = await fetch(`/api/folders`);
                 const folders = await foldersResponse.json();
-                
-                folderList.innerHTML = '';
-                
-                if (folders.length === 0) {
-                    folderList.innerHTML = `
-                        <li class="folder-item">
-                            <div style="padding: 1rem; text-align: center; color: var(--warm-gray);">
-                                📂 No folders found in your Google Drive
-                            </div>
-                        </li>
-                    `;
-                    return;
+
+                // Convert to CloudDrive Picker format
+                const formattedFolders = folders.map(folder => ({
+                    id: folder.id,
+                    name: folder.name,
+                    type: 'folder',
+                    owner: 'My Drive',
+                    modifiedAt: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
+                    parentId: null
+                }));
+
+                // Update MOCK_FILES in CloudDrive Picker
+                if (window.updateCloudPickerFiles) {
+                    window.updateCloudPickerFiles(formattedFolders);
                 }
-                
-                folders.forEach(folder => {
-                    const li = document.createElement('li');
-                    li.className = 'folder-item';
-                    li.innerHTML = `
-                        <a href="#" class="folder-link" onclick="selectFolder('${folder.id}')">
-                            <span class="folder-icon">📁</span>
-                            ${folder.name}
-                        </a>
-                    `;
-                    folderList.appendChild(li);
-                });
-                
+
             } catch (error) {
                 console.error('Error loading folders:', error);
-                folderList.innerHTML = `
-                    <li class="folder-item">
-                        <div style="padding: 1rem; text-align: center; color: #C44536;">
-                            ⚠️ Error loading folders. Please try again.
-                        </div>
-                    </li>
-                `;
+                showToast('ไม่สามารถโหลดโฟลเดอร์จาก Google Drive ได้', 'error');
             }
         }
-        
-        function selectFolder(folderId) {
-            window.location.href = `/set_folder/${currentEventId}/${folderId}`;
-        }
-        
-        // Handle paste form
-        document.getElementById('pasteForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const link = document.getElementById('folderLink').value;
-            
-            // Create a form and submit
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/set_folder_from_link/${currentEventId}`;
-            
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'folder_link';
-            input.value = link;
-            
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
-        });
-        
-        // Add keyboard support for modal
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal.style.display === 'block') {
-                modal.style.display = 'none';
+
+        // Handle folder selection from CloudDrive Picker
+        window.onCloudPickerSelect = (files) => {
+            if (files.length > 0) {
+                const selectedFolder = files[0];
+                // Navigate to set folder
+                window.location.href = `/set_folder/${currentEventId}/${selectedFolder.id}`;
             }
-        });
+        };
 
         // Format seconds to human readable time (e.g., "2m 30s" or "45s")
         function formatTime(seconds) {
