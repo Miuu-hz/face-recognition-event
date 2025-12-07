@@ -226,24 +226,18 @@
             color: #6366f1;
         }
 
-        /* Sidebar */
-        .sidebar {
-            width: 240px;
-            border-right: 1px solid var(--border-primary);
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(20px);
-            padding: 1.5rem 0;
+        /* Category Tabs */
+        .category-tabs {
             display: flex;
-            flex-direction: column;
             gap: 0.5rem;
-            flex-shrink: 0;
+            align-items: center;
         }
 
-        .sidebar-item {
-            padding: 0.75rem 1.5rem;
+        .category-tab {
+            padding: 0.625rem 1rem;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             color: #94a3b8;
             font-weight: 500;
             font-size: 0.875rem;
@@ -251,25 +245,24 @@
             transition: all 0.2s;
             border: none;
             background: transparent;
-            text-align: left;
-            width: 100%;
-            border-left: 3px solid transparent;
+            border-radius: 0.5rem;
+            border-bottom: 2px solid transparent;
         }
 
-        .sidebar-item:hover {
+        .category-tab:hover {
             background: rgba(99, 102, 241, 0.1);
             color: #e2e8f0;
         }
 
-        .sidebar-item.active {
-            background: rgba(99, 102, 241, 0.15);
+        .category-tab.active {
             color: #6366f1;
-            border-left-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            border-bottom-color: #6366f1;
         }
 
-        .sidebar-icon {
-            width: 20px;
-            height: 20px;
+        .category-icon {
+            width: 18px;
+            height: 18px;
         }
 
         /* Content Area */
@@ -674,10 +667,24 @@
 
         <!-- Toolbar -->
         <div class="modal-toolbar">
-            <div class="breadcrumbs" id="breadcrumbs">
-                <!-- Breadcrumbs will be inserted here -->
+            <!-- Category Tabs (Left) -->
+            <div class="category-tabs">
+                <button class="category-tab active" id="myDriveBtn">
+                    <svg class="category-icon">
+                        <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+                    </svg>
+                    <span>My Drive</span>
+                </button>
+                <button class="category-tab" id="sharedBtn">
+                    <svg class="category-icon">
+                        <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        <rect width="20" height="14" x="2" y="6" rx="2"></rect>
+                    </svg>
+                    <span>Shared with me</span>
+                </button>
             </div>
 
+            <!-- View Controls (Right) -->
             <div class="view-controls">
                 <button class="view-btn" id="listViewBtn">
                     <svg class="icon-md">
@@ -697,48 +704,30 @@
                         <rect width="7" height="7" x="3" y="14" rx="1"></rect>
                     </svg>
                 </button>
-                <button class="view-btn" style="margin-left: 0.25rem;">
-                    <svg class="icon-md">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                    </svg>
-                </button>
             </div>
         </div>
 
-        <!-- Main Body with Sidebar -->
-        <div style="display: flex; flex: 1; overflow: hidden;">
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <button class="sidebar-item active" id="myDriveBtn">
-                    <svg class="sidebar-icon">
-                        <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
-                    </svg>
-                    <span>My Drive</span>
-                </button>
-                <button class="sidebar-item" id="sharedBtn">
-                    <svg class="sidebar-icon">
-                        <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                        <rect width="20" height="14" x="2" y="6" rx="2"></rect>
-                    </svg>
-                    <span>Shared with me</span>
-                </button>
+        <!-- Breadcrumbs -->
+        <div style="padding: 0.75rem 1.5rem; border-bottom: 1px solid #1e293b; background: rgba(15, 23, 42, 0.3);">
+            <div class="breadcrumbs" id="breadcrumbs">
+                <!-- Breadcrumbs will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="modal-content">
+            <div id="fileContainer" class="file-grid">
+                <!-- Files will be inserted here -->
             </div>
 
-            <!-- Content -->
-            <div class="modal-content">
-                <div id="fileContainer" class="file-grid">
-                    <!-- Files will be inserted here -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon-wrapper">
+                    <svg style="width: 40px; height: 40px; color: #475569;">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        <path d="M2 13h20"></path>
+                    </svg>
                 </div>
-
-                <div class="empty-state" id="emptyState" style="display: none;">
-                    <div class="empty-icon-wrapper">
-                        <svg style="width: 40px; height: 40px; color: #475569;">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                            <path d="M2 13h20"></path>
-                        </svg>
-                    </div>
-                    <p class="empty-text" id="emptyText">โฟลเดอร์ว่างเปล่า</p>
-                </div>
+                <p class="empty-text" id="emptyText">โฟลเดอร์ว่างเปล่า</p>
             </div>
         </div>
 
@@ -1241,11 +1230,13 @@ document.getElementById('cloudPicker').addEventListener('click', (e) => {
     }
 });
 
-// Sidebar category switching
+// Category tabs switching
 document.getElementById('myDriveBtn').addEventListener('click', () => {
     state.category = 'myDrive';
     state.currentPath = [{ id: null, name: 'My Drive' }];
     state.selectedIds.clear();
+    state.searchTerm = '';
+    document.getElementById('searchInput').value = '';
 
     // Update active state
     document.getElementById('myDriveBtn').classList.add('active');
@@ -1258,6 +1249,8 @@ document.getElementById('sharedBtn').addEventListener('click', () => {
     state.category = 'shared';
     state.currentPath = [{ id: null, name: 'Shared with me' }];
     state.selectedIds.clear();
+    state.searchTerm = '';
+    document.getElementById('searchInput').value = '';
 
     // Update active state
     document.getElementById('sharedBtn').classList.add('active');
