@@ -1503,7 +1503,7 @@ def get_folders():
         creds = Credentials(**session['credentials'])
         drive_service = build('drive', 'v3', credentials=creds)
         results = drive_service.files().list(
-            q="mimeType='application/vnd.google-apps.folder' and trashed=false",
+            q="mimeType='application/vnd.google-apps.folder' and trashed=false and 'me' in owners",
             pageSize=100, fields="files(id, name)", orderBy="name"
         ).execute()
         return jsonify(results.get('files', [])), 200
