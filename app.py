@@ -22,6 +22,15 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.http import MediaIoBaseDownload
 
+# Optional PostgreSQL support
+try:
+    import psycopg2
+    import psycopg2.extras
+    from psycopg2 import pool
+    HAS_POSTGRESQL = True
+except ImportError:
+    HAS_POSTGRESQL = False
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -206,8 +215,40 @@ app.secret_key = os.getenv('SECRET_KEY', 'your_super_secret_key_change_this')
 app.config['DEBUG'] = os.getenv('DEBUG', 'True').lower() == 'true'
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
-# Configuration from environment
+# --- Database Configuration ---
+DATABASE_TYPE = os.getenv('DATABASE_TYPE', 'sqlite').lower()  # 'sqlite' or 'postgresql'
+
+# SQLite Configuration
 DATABASE = os.getenv('DATABASE_PATH', 'database.db')
+
+# PostgreSQL Configuration
+POSTGRES_CONFIG = {
+    'host': os.getenv('POSTGRES_HOST', 'localhost'),
+    'port': int(os.getenv('POSTGRES_PORT', '5432')),
+    'database': os.getenv('POSTGRES_DB', 'face_recognition'),
+    'user': os.getenv('POSTGRES_USER', 'postgres'),
+    'password': os.getenv('POSTGRES_PASSWORD', ''),
+}
+
+# PostgreSQL Connection Pool (initialized later)
+pg_pool = None
+
+def init_postgres_pool():
+    """Initialize PostgreSQL connection pool"""
+    global pg_pool
+    if DATABASE_TYPE == 'postgresql' and HAS_POSTGRESQL:
+        try:
+            pg_pool = psycopg2.pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=20,
+                **POSTGRES_CONFIG
+            )
+            logger.info("✅ PostgreSQL connection pool initialized")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize PostgreSQL pool: {e}")
+            return False
+    return True
 
 # GPU/CPU Detection
 def detect_gpu():
@@ -315,7 +356,7 @@ def invalidate_cache(event_id):
 
 # Print configuration on startup
 def print_config():
-    """Print face recognition configuration"""
+    """Print face recognition and database configuration"""
     print("\n" + "="*50)
     print("Face Recognition Configuration:")
     print("="*50)
@@ -324,6 +365,21 @@ def print_config():
     print(f"Tolerance:    {FACE_RECOGNITION_CONFIG['tolerance']} (lower = stricter)")
     print(f"Batch Size:   {FACE_RECOGNITION_CONFIG['batch_size']} images")
     print(f"Num Jitters:  {FACE_RECOGNITION_CONFIG['num_jitters']}")
+    print("="*50)
+
+    print("\nDatabase Configuration:")
+    print("="*50)
+    print(f"Type:         {DATABASE_TYPE.upper()}")
+    if DATABASE_TYPE == 'postgresql':
+        if HAS_POSTGRESQL:
+            print(f"Host:         {POSTGRES_CONFIG['host']}:{POSTGRES_CONFIG['port']}")
+            print(f"Database:     {POSTGRES_CONFIG['database']}")
+            print(f"User:         {POSTGRES_CONFIG['user']}")
+            print(f"Pool:         {'✅ Enabled' if pg_pool else '⏳ Initializing...'}")
+        else:
+            print("Status:       ❌ psycopg2 not installed (falling back to SQLite)")
+    else:
+        print(f"Path:         {DATABASE}")
     print("="*50 + "\n")
 
 # --- Checkpoint Management Functions ---
@@ -493,6 +549,53 @@ class Task:
                 'completed_at': self.completed_at.isoformat() if self.completed_at else None
             }
 
+# --- Database Wrapper Class ---
+class DatabaseWrapper:
+    """Wrapper to provide unified interface for SQLite and PostgreSQL"""
+
+    def __init__(self, conn, db_type):
+        self.conn = conn
+        self.db_type = db_type
+
+        # Set row_factory for dict-like access
+        if db_type == 'sqlite':
+            conn.row_factory = sqlite3.Row
+        elif db_type == 'postgresql':
+            # PostgreSQL cursor will use RealDictCursor
+            pass
+
+    def execute(self, query, params=()):
+        """Execute query with automatic parameter substitution"""
+        if self.db_type == 'postgresql':
+            # Convert SQLite ? placeholders to PostgreSQL %s
+            query = query.replace('?', '%s')
+            cursor = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            cursor = self.conn.cursor()
+
+        cursor.execute(query, params)
+        return cursor
+
+    def commit(self):
+        """Commit transaction"""
+        self.conn.commit()
+
+    def rollback(self):
+        """Rollback transaction"""
+        self.conn.rollback()
+
+    def close(self):
+        """Close connection"""
+        if self.db_type == 'postgresql' and pg_pool:
+            # Return connection to pool instead of closing
+            pg_pool.putconn(self.conn)
+        else:
+            self.conn.close()
+
+    def __getattr__(self, name):
+        """Forward unknown attributes to underlying connection"""
+        return getattr(self.conn, name)
+
 # In-memory task store
 tasks = {}
 tasks_lock = threading.Lock()
@@ -512,17 +615,44 @@ def get_task(task_id):
 
 # --- ฟังก์ชันจัดการฐานข้อมูล (ฉบับสมบูรณ์) ---
 def get_db():
+    """Get database connection (SQLite or PostgreSQL based on config)"""
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
-        db.row_factory = sqlite3.Row
+        if DATABASE_TYPE == 'postgresql' and HAS_POSTGRESQL:
+            # Get connection from PostgreSQL pool
+            if not pg_pool:
+                init_postgres_pool()
+
+            if pg_pool:
+                conn = pg_pool.getconn()
+                db = g._database = DatabaseWrapper(conn, 'postgresql')
+                logger.debug("PostgreSQL connection acquired from pool")
+            else:
+                # Fallback to SQLite if PostgreSQL pool failed
+                logger.warning("PostgreSQL pool not available, falling back to SQLite")
+                conn = sqlite3.connect(DATABASE)
+                db = g._database = DatabaseWrapper(conn, 'sqlite')
+        else:
+            # Use SQLite
+            conn = sqlite3.connect(DATABASE)
+            db = g._database = DatabaseWrapper(conn, 'sqlite')
     return db
 
 @app.teardown_appcontext
 def close_connection(exception):
+    """Close database connection (return to pool for PostgreSQL)"""
     db = getattr(g, '_database', None)
-    if db is not None: # แก้ไข Syntax ที่ผิดพลาดจาก 'is not in None'
+    if db is not None:
         db.close()
+
+def get_db_connection():
+    """Get raw database connection for background threads (not Flask context-aware)"""
+    if DATABASE_TYPE == 'postgresql' and HAS_POSTGRESQL and pg_pool:
+        conn = pg_pool.getconn()
+        return DatabaseWrapper(conn, 'postgresql')
+    else:
+        conn = sqlite3.connect(DATABASE)
+        return DatabaseWrapper(conn, 'sqlite')
 
 
 def init_db():
@@ -607,8 +737,7 @@ def create_average_encoding(encodings):
 
 def run_incremental_indexing_background(task, event_id, folder_id, credentials_dict):
     """Run INCREMENTAL face indexing (only NEW photos) using Drive Changes API"""
-    db_conn = sqlite3.connect(DATABASE)
-    db_conn.row_factory = sqlite3.Row
+    db_conn = get_db_connection()
 
     try:
         task.start()
@@ -868,8 +997,7 @@ def run_incremental_indexing_background(task, event_id, folder_id, credentials_d
 def run_indexing_background(task, event_id, folder_id, credentials_dict):
     """Run face indexing in background thread"""
     # Create new database connection for this thread
-    db_conn = sqlite3.connect(DATABASE)
-    db_conn.row_factory = sqlite3.Row
+    db_conn = get_db_connection()
 
     try:
         task.start()
@@ -1922,6 +2050,11 @@ def internal_server_error(e):
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
+    # Initialize PostgreSQL connection pool if needed
+    if DATABASE_TYPE == 'postgresql':
+        if not init_postgres_pool():
+            print("⚠️  Warning: Failed to initialize PostgreSQL pool, falling back to SQLite")
+
     print_config()
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', '5000'))
