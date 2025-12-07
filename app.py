@@ -1511,6 +1511,79 @@ def get_folders():
         print(f'An error occurred: {error}')
         return jsonify({'error': 'Failed to fetch folders'}), 500
 
+@app.route('/api/shared_folders')
+def get_shared_folders():
+    if 'credentials' not in session: return jsonify({'error': 'Not authenticated'}), 401
+    try:
+        creds = Credentials(**session['credentials'])
+        drive_service = build('drive', 'v3', credentials=creds)
+        
+        # Query นี้สำคัญ: sharedWithMe=true คือดึงเฉพาะที่คนอื่นแชร์มา
+        results = drive_service.files().list(
+            q="mimeType='application/vnd.google-apps.folder' and trashed=false and sharedWithMe=true",
+            pageSize=100, 
+            fields="files(id, name, owners)", # ขอข้อมูล owners ด้วยเพื่อเอาชื่อคนแชร์
+            orderBy="name"
+        ).execute()
+        
+        files = results.get('files', [])
+        
+        # ปรับแต่งข้อมูลเล็กน้อยเพื่อให้หน้าบ้านใช้ง่ายขึ้น (ดึงชื่อเจ้าของมาใส่ field 'owner')
+        formatted_files = []
+        for file in files:
+            owner_name = 'Unknown'
+            if 'owners' in file and file['owners']:
+                owner_name = file['owners'][0].get('displayName', 'Unknown')
+            
+            formatted_files.append({
+                'id': file['id'],
+                'name': file['name'],
+                'owner': owner_name
+            })
+            
+        return jsonify(formatted_files), 200
+    except HttpError as error:
+        print(f'An error occurred: {error}')
+        return jsonify({'error': 'Failed to fetch shared folders'}), 500
+
+@app.route('/api/folder_preview/<folder_id>')
+def get_folder_preview(folder_id):
+    if 'credentials' not in session: 
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        creds = Credentials(**session['credentials'])
+        drive_service = build('drive', 'v3', credentials=creds)
+        
+        # 1. ค้นหารูปภาพในโฟลเดอร์นี้ (เอาแค่ field id และ thumbnailLink เพื่อความเร็ว)
+        # เราดึงมา 100 รายการเพื่อเอามานับจำนวน (Google Drive API ไม่บอกจำนวนรวม ต้องนับเอง)
+        query = f"'{folder_id}' in parents and (mimeType contains 'image/') and trashed=false"
+        results = drive_service.files().list(
+            q=query,
+            pageSize=100, # ดึงมานับสูงสุด 100 รูป (ถ้าเกินจะโชว์ 99+)
+            fields="files(id, thumbnailLink), nextPageToken" 
+        ).execute()
+        
+        files = results.get('files', [])
+        
+        # 2. เอา 4 รูปแรกมาทำ Preview
+        thumbnails = [f['thumbnailLink'] for f in files if 'thumbnailLink' in f][:4]
+        
+        # 3. นับจำนวน (ถ้ามี nextPageToken แสดงว่ามีมากกว่า 100 รูป)
+        total_count = len(files)
+        if 'nextPageToken' in results:
+            total_count = 100  # ใช้เป็นตัวแทนว่า 99+
+            
+        return jsonify({
+            'thumbnails': thumbnails,
+            'totalCount': total_count,
+            'hasMore': 'nextPageToken' in results
+        })
+
+    except Exception as e:
+        print(f"Error fetching preview for {folder_id}: {e}")
+        return jsonify({'thumbnails': [], 'totalCount': 0}), 500
+
 @app.route('/api/task/<task_id>')
 def get_task_status(task_id):
     """Get status of a background task"""

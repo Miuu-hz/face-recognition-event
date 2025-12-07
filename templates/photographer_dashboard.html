@@ -522,11 +522,11 @@
             padding: 0;
             border-radius: 1rem;
             width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
+            max-width: 1400px;
+            max-height: 200vh;
             overflow: hidden;
-            border: 1px solid var(--border-primary);
-            animation: modalSlideIn 0.3s ease;
+            border: 5px solid var(--border-primary);
+            animation: modalSlideIn 1.28s ease;
         }
 
         @keyframes modalSlideIn {
@@ -1001,61 +1001,112 @@
         // Load folders from Google Drive API
         async function loadGoogleDriveFolders() {
             try {
-                // Check if user is logged in first
+                    // เช็ค Auth ตามปกติ
                 const authResponse = await fetch(`/api/check_auth`);
-                if (!authResponse.ok) {
-                    // Redirect to login if not authenticated
-                    window.location.href = '/login_temp';
-                    return;
-                }
+                if (!authResponse.ok) { window.location.href = '/login_temp'; return; }
 
-                // Fetch folders from My Drive
+                // 1. ดึงข้อมูล My Drive
                 const foldersResponse = await fetch(`/api/folders`);
-                const folders = await foldersResponse.json();
+                const myFolders = await foldersResponse.json();
 
-                // Fetch shared folders (if API exists)
+                // 2. ดึงข้อมูล Shared (ถ้ามี)
                 let sharedFolders = [];
                 try {
                     const sharedResponse = await fetch(`/api/shared_folders`);
-                    if (sharedResponse.ok) {
-                        sharedFolders = await sharedResponse.json();
-                    }
-                } catch (e) {
-                    console.log('Shared folders API not available, skipping...');
-                }
+                    if (sharedResponse.ok) sharedFolders = await sharedResponse.json();
+                } catch (e) { console.log('No shared folders'); }
 
-                // Convert My Drive folders to CloudDrive Picker format
-                const formattedMyDrive = folders.map(folder => ({
-                    id: folder.id,
-                    name: folder.name,
+                // 3. แปลงข้อมูลเบื้องต้น (ยังไม่มีรูป Preview)
+                const mapFolder = (f, owner, shared) => ({
+                    id: f.id,
+                    name: f.name,
                     type: 'folder',
-                    owner: 'ฉัน',
-                    modifiedAt: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
+                    owner: owner,
+                    modifiedAt: '-', 
                     parentId: null,
-                    sharedWithMe: false
-                }));
+                    sharedWithMe: shared,
+                    // ใส่ค่าว่างไว้ก่อน เพื่อให้โหลดเร็ว
+                    previewData: { thumbnails: [], totalCount: 0 } 
+                });
 
-                // Convert Shared folders to CloudDrive Picker format
-                const formattedShared = sharedFolders.map(folder => ({
-                    id: folder.id,
-                    name: folder.name,
-                    type: 'folder',
-                    owner: folder.owner || 'แชร์กับฉัน',
-                    modifiedAt: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
-                    parentId: null,
-                    sharedWithMe: true
-                }));
+                const formattedMyDrive = myFolders.map(f => mapFolder(f, 'ฉัน', false));
+                const formattedShared = sharedFolders.map(f => mapFolder(f, f.owner || 'แชร์กับฉัน', true));
 
-                // ส่งข้อมูลแยกกัน 2 arrays ไปยัง CloudDrive Picker
+                // 4. ส่งข้อมูลเข้า Picker เพื่อให้แสดงผลขึ้นมาก่อน (ผู้ใช้จะได้ไม่รอนาน)
                 if (window.updateCloudPickerFiles) {
                     window.updateCloudPickerFiles(formattedMyDrive, formattedShared);
                 }
 
+                // 5. [ใหม่!] เริ่มทยอยโหลดรูปตัวอย่างทีละโฟลเดอร์ (Background Process)
+                fetchPreviewsLazy([...formattedMyDrive, ...formattedShared]);
+
             } catch (error) {
-                console.error('Error loading folders:', error);
-                showToast('ไม่สามารถโหลดโฟลเดอร์จาก Google Drive ได้', 'error');
+                console.error('Error:', error);
+                showToast('โหลดข้อมูลไม่สำเร็จ', 'error');
             }
         }
+
+        // ฟังก์ชันใหม่: ทยอยโหลดรูปตัวอย่าง
+    async function fetchPreviewsLazy(allFolders) {
+        // วนลูปทุกโฟลเดอร์
+        for (const folder of allFolders) {
+            try {
+                // เรียก API ที่เราเพิ่งสร้างใน app.py
+                const res = await fetch(`/api/folder_preview/${folder.id}`);
+                const data = await res.json();
+
+                // อัปเดตหน้าจอทันที (DOM Manipulation)
+                updateFolderCardUI(folder.id, data);
+                
+            } catch (err) {
+                console.warn(`Cannot load preview for ${folder.id}`, err);
+            }
+        }
+    }
+
+    // ฟังก์ชันใหม่: ยัด HTML รูปตัวอย่างเข้าไปในการ์ดโฟลเดอร์
+    function updateFolderCardUI(folderId, data) {
+        // หา Element ของโฟลเดอร์นั้นในหน้าจอ (อิงจาก data-file-id ที่ cloud_file_picker.html สร้างไว้)
+        const fileItem = document.querySelector(`.file-item[data-file-id="${folderId}"]`);
+        if (!fileItem) return;
+
+        // 1. อัปเดตส่วนรูปภาพ (Grid 4 รูป)
+        const previewDiv = fileItem.querySelector('.file-preview');
+        if (previewDiv && data.thumbnails.length > 0) {
+            let gridHtml = '<div class="folder-grid">';
+            
+            // สร้าง 4 ช่อง
+            for (let i = 0; i < 4; i++) {
+                gridHtml += '<div class="folder-grid-item">';
+                if (data.thumbnails[i]) {
+                    gridHtml += `<img src="${data.thumbnails[i]}" referrerpolicy="no-referrer">`;
+                }
+                // ถ้าเป็นช่องสุดท้ายและมีรูปเยอะกว่า 4 รูป ให้ใส่เลขบอกจำนวน
+                if (i === 3 && data.totalCount > 4) {
+                     gridHtml += `<div class="folder-more">+${data.totalCount - 4}</div>`;
+                }
+                gridHtml += '</div>';
+            }
+            gridHtml += '</div>';
+            
+            // ลบ Icon เก่าออก แล้วใส่ Grid รูปเข้าไปแทน
+            previewDiv.innerHTML = gridHtml + '<div class="preview-overlay"></div>';
+            previewDiv.classList.add('folder'); // เพื่อให้ CSS ตัดขอบมน
+        }
+
+        // 2. อัปเดตส่วนข้อความจำนวนรูป (Size)
+        const sizeDiv = fileItem.querySelector('.file-size');
+        if (sizeDiv) {
+            const countText = data.hasMore ? '99+' : data.totalCount;
+            sizeDiv.textContent = `${countText} รูป`;
+        }
+        
+        // อัปเดต List View ด้วย (ถ้าเปิดโหมด List อยู่)
+        const listSizeDiv = fileItem.querySelector('.list-size');
+        if (listSizeDiv) {
+            listSizeDiv.textContent = `${data.totalCount} รูป`;
+        }
+    }
 
         // Handle folder selection from CloudDrive Picker
         window.onCloudPickerSelect = (files) => {

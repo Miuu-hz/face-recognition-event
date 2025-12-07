@@ -6,3 +6,5 @@ venv/
 .env
 client_secrets.json
 *.db
+.venv/
+dlib/

@@ -715,3 +715,364 @@ sqlite3.OperationalError: no such table: indexing_checkpoints
 [2025-12-03 23:22:08] DEBUG [face_recognition_app:655] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Found 3 faces in 592131384_1704586957545020_5887388887039601685_n.jpg
 [2025-12-03 23:22:08] INFO [face_recognition_app:351] - Cleared checkpoints for event e91a6eef-6e8a-4076-9193-930dd9301a21
 [2025-12-03 23:22:08] INFO [face_recognition_app:698] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Indexing completed successfully. Photos: 1, Faces: 3
+[2025-12-07 21:25:19] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-07 21:25:38] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 21:25:38] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484197
+[2025-12-07 21:25:38] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484197
+[2025-12-07 21:25:39] DEBUG [face_recognition_app:1831] - Updated page token for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-07 21:25:39] DEBUG [face_recognition_app:1831] - Updated page token for event 4157852c-76da-4320-821f-56c24e11c3a7
+[2025-12-07 21:25:44] INFO [face_recognition_app:1231] - Created event: mmw (ID: 0797b291-a38d-4114-9171-3ab4696d5c4a)
+[2025-12-07 21:25:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484204
+[2025-12-07 21:25:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484204
+[2025-12-07 21:26:14] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484204
+[2025-12-07 21:26:14] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484204
+[2025-12-07 21:26:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484204
+[2025-12-07 21:26:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484204
+[2025-12-07 21:27:14] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484204
+[2025-12-07 21:27:14] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484204
+[2025-12-07 21:27:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484204
+[2025-12-07 21:27:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484204
+[2025-12-07 21:28:15] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484204
+[2025-12-07 21:28:15] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484204
+[2025-12-07 21:28:15] DEBUG [face_recognition_app:1831] - Updated page token for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-07 21:28:15] DEBUG [face_recognition_app:1831] - Updated page token for event 4157852c-76da-4320-821f-56c24e11c3a7
+[2025-12-07 21:28:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484208
+[2025-12-07 21:28:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484208
+[2025-12-07 21:28:45] DEBUG [face_recognition_app:1831] - Updated page token for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-07 21:28:45] DEBUG [face_recognition_app:1831] - Updated page token for event 4157852c-76da-4320-821f-56c24e11c3a7
+[2025-12-07 21:29:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484219
+[2025-12-07 21:29:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484219
+[2025-12-07 21:29:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484219
+[2025-12-07 21:29:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484219
+[2025-12-07 21:29:46] DEBUG [face_recognition_app:1831] - Updated page token for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-07 21:29:46] DEBUG [face_recognition_app:1831] - Updated page token for event 4157852c-76da-4320-821f-56c24e11c3a7
+[2025-12-07 21:30:15] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:30:15] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:31:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:31:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:31:15] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:31:15] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:31:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:31:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:33:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:33:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:34:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:34:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:35:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:35:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:36:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:36:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:36:18] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:36:18] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:36:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:36:45] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:53:35] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 21:53:35] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:53:35] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:54:59] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 21:54:59] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:54:59] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:55:02] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 21:55:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:55:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:55:59] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:55:59] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:56:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:56:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:56:59] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:56:59] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 21:57:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 21:57:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:14:24] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 22:14:24] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:14:24] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:14:28] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 22:14:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:14:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:15:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:15:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:15:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:15:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:16:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:16:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:16:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:16:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:17:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:17:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:18:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:18:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:19:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:19:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:20:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:20:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:21:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:21:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:21:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:21:44] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:28:25] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 22:28:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:28:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:28:28] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 22:28:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:28:55] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:29:26] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:29:26] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:29:56] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:29:56] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:30:26] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:30:26] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:30:56] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:30:56] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:31:26] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:31:26] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:32:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:32:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:33:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:33:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:34:05] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 22:34:05] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:34:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 22:34:25] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:17:17] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-07 23:17:31] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 23:17:31] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:17:31] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:17:41] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:18:01] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:18:01] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:18:31] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:18:31] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:47:43] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 23:47:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:47:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:47:49] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:48:23] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-07 23:48:39] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-07 23:48:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:48:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:48:42] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:49:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:49:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:49:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:49:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:50:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:50:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:50:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:50:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:51:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:51:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:51:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:51:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:52:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:52:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:52:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:52:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:53:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:53:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:53:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:53:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:54:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:54:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:54:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:54:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:55:37] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:55:37] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:55:38] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:55:38] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:55:46] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:55:47] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:55:49] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:55:50] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:55:52] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:56:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:56:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:56:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:56:39] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:57:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:57:09] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:57:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:57:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:57:35] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-07 23:57:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:57:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:58:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:58:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:58:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:58:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:59:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-07 23:59:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:59:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-07 23:59:43] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:00:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:00:13] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:00:33] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:00:33] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:00:35] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:00:37] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:00:37] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:00:39] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:01:03] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:01:03] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:01:05] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:01:34] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:01:34] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:02:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:02:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:02:34] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:02:34] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:03:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:03:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:03:34] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:03:34] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:04:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:04:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:05:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:05:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:06:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:06:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:06:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:06:29] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:06:37] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:07:00] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:07:00] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:07:30] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:07:30] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:07:41] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-08 00:07:41] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:07:41] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:07:43] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:08:11] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:08:11] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:08:41] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:08:41] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:09:12] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:09:12] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:09:42] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:09:42] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:10:12] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:10:12] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:10:42] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:10:42] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:12:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:12:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:13:03] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:13:03] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:13:11] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:13:11] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:13:13] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:13:31] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-08 00:13:53] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-08 00:13:53] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:13:53] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:14:01] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:14:55] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-08 00:15:20] INFO [face_recognition_app:1895] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-08 00:15:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:15:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:15:22] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:15:50] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:15:50] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:16:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:16:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:16:50] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:16:50] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:17:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:17:20] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:17:50] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:17:50] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:18:11] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:18:11] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:18:13] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:18:36] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:18:36] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:18:39] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:19:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:19:04] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:19:05] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:19:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:19:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:19:28] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:19:58] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:19:58] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:20:28] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:20:28] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:20:58] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:20:58] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:21:28] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:21:28] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:21:58] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:21:58] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:22:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:22:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:22:28] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:22:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:22:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:23:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:23:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:23:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:23:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:24:20] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:24:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:24:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:24:35] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:24:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:24:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:25:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:25:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:25:32] WARNING [face_recognition_app:2043] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-08 00:25:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:25:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:26:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:26:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:26:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:26:57] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:27:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:27:27] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:28:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:28:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:29:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:29:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:30:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:30:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:31:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:31:06] DEBUG [face_recognition_app:1769] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:31:30] WARNING [face_recognition_app:2078] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-08 00:31:56] INFO [face_recognition_app:1930] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-08 00:31:56] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:31:56] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:32:27] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:32:27] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:32:57] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:32:57] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:33:27] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:33:27] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:33:57] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:33:57] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:34:27] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:34:27] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:34:57] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:34:57] DEBUG [face_recognition_app:1804] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:36:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:36:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:37:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:37:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:38:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:38:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:39:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:39:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:40:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:40:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:41:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:41:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:42:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:42:06] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:42:51] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:42:51] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:42:56] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:42:56] DEBUG [face_recognition_app:1806] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:43:15] WARNING [face_recognition_app:2116] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-08 00:43:28] INFO [face_recognition_app:1968] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-08 00:43:28] DEBUG [face_recognition_app:1842] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
+[2025-12-08 00:43:28] DEBUG [face_recognition_app:1842] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:43:58] DEBUG [face_recognition_app:1842] - Checking Drive changes for event 4157852c-76da-4320-821f-56c24e11c3a7 with token 484449
+[2025-12-08 00:43:58] DEBUG [face_recognition_app:1842] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484449
