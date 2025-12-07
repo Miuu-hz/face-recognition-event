@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudDrive Picker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #020617;
+            color: #ffffff;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(2, 6, 23, 0.6);
+            backdrop-filter: blur(16px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 88vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 1rem;
+            border: 1px solid #1e293b;
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Header */
+        .modal-header {
+            height: 80px;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            gap: 1.5rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .cloud-icon-wrapper {
+            width: 44px;
+            height: 44px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .search-wrapper {
+            flex: 1;
+            max-width: 48rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border-radius: 0.75rem;
+            border: 1px solid #1e293b;
+            background: rgba(30, 41, 59, 0.5);
+            color: #ffffff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: #6366f1;
+            background: rgba(30, 41, 59, 0.7);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            pointer-events: none;
+        }
+
+        .clear-search {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 9999px;
+            display: none;
+        }
+
+        .clear-search.active {
+            display: block;
+        }
+
+        .close-btn {
+            padding: 0.5rem;
+            border-radius: 9999px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .close-btn:hover {
+            background: rgba(148, 163, 184, 0.1);
+        }
+
+        /* Toolbar */
+        .modal-toolbar {
+            height: 64px;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            flex-shrink: 0;
+        }
+
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            overflow-x: auto;
+        }
+
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.5rem;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .breadcrumb-item:hover:not(.active) {
+            background: rgba(99, 102, 241, 0.1);
+            color: #e2e8f0;
+        }
+
+        .breadcrumb-item.active {
+            font-weight: 600;
+            color: #ffffff;
+            background: rgba(99, 102, 241, 0.15);
+            pointer-events: none;
+        }
+
+        .breadcrumb-separator {
+            color: #64748b;
+            flex-shrink: 0;
+        }
+
+        .view-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-left: 1px solid #1e293b;
+            padding-left: 1rem;
+            margin-left: 1rem;
+        }
+
+        .view-btn {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            background: transparent;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background: rgba(99, 102, 241, 0.2);
+            color: #6366f1;
+        }
+
+        /* Content Area */
+        .modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .empty-state {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+        }
+
+        .empty-icon-wrapper {
+            width: 96px;
+            height: 96px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(30, 41, 59, 0.5);
+            margin-bottom: 1rem;
+        }
+
+        .empty-text {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+
+        /* Grid View */
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        /* List View */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .file-item {
+            position: relative;
+            border-radius: 1rem;
+            border: 1px solid #1e293b;
+            background: rgba(30, 41, 59, 0.5);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-item.selected {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+        }
+
+        .file-item.disabled {
+            opacity: 0.6;
+            cursor: default;
+            filter: grayscale(1);
+        }
+
+        /* Grid Item */
+        .file-item.grid-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-preview {
+            aspect-ratio: 4/3;
+            width: 100%;
+            border-radius: 1rem 1rem 0 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .file-preview.folder {
+            background: rgba(30, 41, 59, 0.6);
+        }
+
+        .file-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .folder-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            width: 100%;
+            height: 100%;
+            gap: 2px;
+            padding: 2px;
+        }
+
+        .folder-grid-item {
+            background: rgba(30, 41, 59, 0.6);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .folder-grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .folder-more {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+
+        .file-info {
+            padding: 1rem;
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+        }
+
+        .file-icon-small {
+            margin-top: 0.125rem;
+            flex-shrink: 0;
+        }
+
+        .file-details {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .file-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.375rem;
+        }
+
+        .file-size {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .check-icon {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            z-index: 10;
+            background: #6366f1;
+            border-radius: 9999px;
+            padding: 0.125rem;
+            color: white;
+            display: none;
+        }
+
+        .file-item.selected .check-icon {
+            display: block;
+        }
+
+        .preview-overlay {
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            transition: all 0.2s;
+        }
+
+        .file-item.selected .preview-overlay {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        /* List Item */
+        .file-item.list-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .list-icon-wrapper {
+            width: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .list-file-name {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .list-owner {
+            width: 128px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: none;
+        }
+
+        .list-modified {
+            width: 128px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            display: none;
+        }
+
+        .list-size {
+            width: 80px;
+            font-size: 0.75rem;
+            color: #64748b;
+            text-align: right;
+        }
+
+        @media (min-width: 640px) {
+            .list-owner,
+            .list-modified {
+                display: block;
+            }
+        }
+
+        /* Footer */
+        .modal-footer {
+            height: 96px;
+            border-top: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            flex-shrink: 0;
+        }
+
+        .selection-info {
+            font-size: 0.875rem;
+        }
+
+        .selection-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            border: 1px solid #6366f1;
+            color: #6366f1;
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .selection-empty {
+            color: #64748b;
+        }
+
+        .footer-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.75rem 2rem;
+            border-radius: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(148, 163, 184, 0.1);
+        }
+
+        .btn-select {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            padding: 0.75rem 2.5rem;
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-select:disabled {
+            background: #334155;
+            box-shadow: none;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Icons */
+        svg {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .icon-sm {
+            width: 16px;
+            height: 16px;
+        }
+
+        .icon-md {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="modal-overlay" id="cloudPicker">
+    <div class="modal-container">
+        <!-- Header -->
+        <div class="modal-header">
+            <div class="header-left">
+                <div class="cloud-icon-wrapper">
+                    <svg>
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                    </svg>
+                </div>
+                <h2 class="modal-title" id="modalTitle">เลือกโฟลเดอร์</h2>
+            </div>
+
+            <div class="search-wrapper">
+                <svg class="search-icon icon-md">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.3-4.3"></path>
+                </svg>
+                <input
+                    type="text"
+                    class="search-input"
+                    id="searchInput"
+                    placeholder="ค้นหาโฟลเดอร์หรือวาง Google Drive link..."
+                >
+                <button class="clear-search" id="clearSearch">
+                    <svg class="icon-sm">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <button class="close-btn" id="closeBtn">
+                <svg>
+                    <path d="M18 6 6 18"></path>
+                    <path d="m6 6 12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="modal-toolbar">
+            <div class="breadcrumbs" id="breadcrumbs">
+                <!-- Breadcrumbs will be inserted here -->
+            </div>
+
+            <div class="view-controls">
+                <button class="view-btn" id="listViewBtn">
+                    <svg class="icon-md">
+                        <line x1="8" x2="21" y1="6" y2="6"></line>
+                        <line x1="8" x2="21" y1="12" y2="12"></line>
+                        <line x1="8" x2="21" y1="18" y2="18"></line>
+                        <line x1="3" x2="3.01" y1="6" y2="6"></line>
+                        <line x1="3" x2="3.01" y1="12" y2="12"></line>
+                        <line x1="3" x2="3.01" y1="18" y2="18"></line>
+                    </svg>
+                </button>
+                <button class="view-btn active" id="gridViewBtn">
+                    <svg class="icon-md">
+                        <rect width="7" height="7" x="3" y="3" rx="1"></rect>
+                        <rect width="7" height="7" x="14" y="3" rx="1"></rect>
+                        <rect width="7" height="7" x="14" y="14" rx="1"></rect>
+                        <rect width="7" height="7" x="3" y="14" rx="1"></rect>
+                    </svg>
+                </button>
+                <button class="view-btn" style="margin-left: 0.25rem;">
+                    <svg class="icon-md">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="modal-content">
+            <div id="fileContainer" class="file-grid">
+                <!-- Files will be inserted here -->
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-icon-wrapper">
+                    <svg style="width: 40px; height: 40px; color: #475569;">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        <path d="M2 13h20"></path>
+                    </svg>
+                </div>
+                <p class="empty-text" id="emptyText">โฟลเดอร์ว่างเปล่า</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+            <div class="selection-info">
+                <span class="selection-badge" id="selectionBadge" style="display: none;">
+                    <svg class="icon-sm">
+                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                        <path d="m9 12 2 2 4-4"></path>
+                    </svg>
+                    <span id="selectionText">0 โฟลเดอร์ที่เลือก</span>
+                </span>
+                <span class="selection-empty" id="selectionEmpty">ยังไม่ได้เลือกรายการ</span>
+            </div>
+
+            <div class="footer-actions">
+                <button class="btn btn-cancel" id="cancelBtn">ยกเลิก</button>
+                <button class="btn btn-select" id="selectBtn" disabled>เลือก</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Mock Data
+const MOCK_FILES = [
+    {
+        id: 'folder-1',
+        name: 'Event Photos 2024',
+        type: 'folder',
+        owner: 'คุณสมชาย',
+        modifiedAt: '15 พ.ย. 2024',
+        parentId: null
+    },
+    {
+        id: 'folder-2',
+        name: 'Wedding Photos',
+        type: 'folder',
+        owner: 'คุณสมหญิง',
+        modifiedAt: '10 พ.ย. 2024',
+        parentId: null
+    },
+    {
+        id: 'folder-3',
+        name: 'Corporate Events',
+        type: 'folder',
+        owner: 'คุณสมศักดิ์',
+        modifiedAt: '5 พ.ย. 2024',
+        parentId: null
+    },
+    {
+        id: 'img-1',
+        name: 'IMG_001.jpg',
+        type: 'image',
+        size: '2.5 MB',
+        owner: 'คุณสมชาย',
+        modifiedAt: '15 พ.ย. 2024',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=200',
+        parentId: 'folder-1'
+    },
+    {
+        id: 'img-2',
+        name: 'IMG_002.jpg',
+        type: 'image',
+        size: '3.1 MB',
+        owner: 'คุณสมชาย',
+        modifiedAt: '15 พ.ย. 2024',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200',
+        parentId: 'folder-1'
+    },
+    {
+        id: 'img-3',
+        name: 'IMG_003.jpg',
+        type: 'image',
+        size: '2.8 MB',
+        owner: 'คุณสมชาย',
+        modifiedAt: '15 พ.ย. 2024',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=200',
+        parentId: 'folder-1'
+    },
+    {
+        id: 'img-4',
+        name: 'IMG_004.jpg',
+        type: 'image',
+        size: '4.2 MB',
+        owner: 'คุณสมชาย',
+        modifiedAt: '15 พ.ย. 2024',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1470229538611-16ba8c7ffbd7?w=200',
+        parentId: 'folder-1'
+    },
+    {
+        id: 'img-5',
+        name: 'IMG_005.jpg',
+        type: 'image',
+        size: '3.5 MB',
+        owner: 'คุณสมชาย',
+        modifiedAt: '14 พ.ย. 2024',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=200',
+        parentId: 'folder-1'
+    }
+];
+
+// State
+const state = {
+    currentPath: [{ id: null, name: 'My Drive' }],
+    selectedIds: new Set(),
+    viewMode: 'grid',
+    searchTerm: '',
+    selectFoldersOnly: true,
+    maxSelections: 1
+};
+
+// Get file icon SVG
+function getFileIconSVG(type) {
+    const icons = {
+        folder: `<svg style="width: 48px; height: 48px; color: #6366f1;">
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-5L9 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16Z"></path>
+        </svg>`,
+        'folder-small': `<svg style="width: 16px; height: 16px; color: #6366f1;">
+            <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-5L9 2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16Z"></path>
+        </svg>`,
+        image: `<svg style="width: 40px; height: 40px; color: #a855f7;">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+            <circle cx="9" cy="9" r="2"></circle>
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+        </svg>`,
+        'image-small': `<svg style="width: 24px; height: 24px; color: #a855f7;">
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+            <circle cx="9" cy="9" r="2"></circle>
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+        </svg>`
+    };
+    return icons[type] || icons.folder;
+}
+
+// Get folder preview images
+function getFolderPreview(folderId) {
+    const images = MOCK_FILES.filter(f => f.parentId === folderId && f.type === 'image');
+    return {
+        thumbnails: images.slice(0, 4).map(f => f.thumbnailUrl || ''),
+        totalCount: images.length
+    };
+}
+
+// Filter files
+function getFilteredFiles() {
+    let files = MOCK_FILES;
+    const searchTerm = state.searchTerm.trim().toLowerCase();
+
+    if (searchTerm) {
+        files = files.filter(f => f.name.toLowerCase().includes(searchTerm));
+    } else {
+        const currentFolderId = state.currentPath[state.currentPath.length - 1].id;
+        files = files.filter(f => f.parentId === currentFolderId);
+    }
+
+    // Sort: Folders first, then files
+    return files.sort((a, b) => {
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+        return a.name.localeCompare(b.name);
+    });
+}
+
+// Render breadcrumbs
+function renderBreadcrumbs() {
+    const breadcrumbsEl = document.getElementById('breadcrumbs');
+
+    if (state.searchTerm) {
+        breadcrumbsEl.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500; padding: 0.375rem 0.75rem; color: #e2e8f0;">
+                <svg class="icon-sm" style="color: #64748b;">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.3-4.3"></path>
+                </svg>
+                ผลการค้นหา "${state.searchTerm}"
+            </div>
+        `;
+        return;
+    }
+
+    breadcrumbsEl.innerHTML = state.currentPath.map((item, index) => {
+        const isLast = index === state.currentPath.length - 1;
+        const isFirst = index === 0;
+
+        return `
+            ${index > 0 ? '<svg class="breadcrumb-separator icon-sm"><path d="m9 18 6-6-6-6"></path></svg>' : ''}
+            <button class="breadcrumb-item ${isLast ? 'active' : ''}" data-folder-id="${item.id}" data-folder-name="${item.name}">
+                ${isFirst ? getFileIconSVG('folder-small') : ''}
+                ${item.name}
+            </button>
+        `;
+    }).join('');
+
+    // Add click handlers
+    breadcrumbsEl.querySelectorAll('.breadcrumb-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            handleNavigate(btn.dataset.folderId === 'null' ? null : btn.dataset.folderId, btn.dataset.folderName);
+        });
+    });
+}
+
+// Render files
+function renderFiles() {
+    const files = getFilteredFiles();
+    const containerEl = document.getElementById('fileContainer');
+    const emptyStateEl = document.getElementById('emptyState');
+    const emptyTextEl = document.getElementById('emptyText');
+
+    if (files.length === 0) {
+        containerEl.style.display = 'none';
+        emptyStateEl.style.display = 'flex';
+        emptyTextEl.textContent = state.searchTerm ? 'ไม่พบโฟลเดอร์หรือไฟล์' : 'โฟลเดอร์ว่างเปล่า';
+        return;
+    }
+
+    containerEl.style.display = state.viewMode === 'grid' ? 'grid' : 'flex';
+    emptyStateEl.style.display = 'none';
+
+    containerEl.className = state.viewMode === 'grid' ? 'file-grid' : 'file-list';
+
+    containerEl.innerHTML = files.map(file => {
+        const isSelected = state.selectedIds.has(file.id);
+        const isDisabled = state.selectFoldersOnly && file.type !== 'folder';
+        const previewData = file.type === 'folder' ? getFolderPreview(file.id) : null;
+
+        if (state.viewMode === 'grid') {
+            return renderGridItem(file, isSelected, isDisabled, previewData);
+        } else {
+            return renderListItem(file, isSelected, isDisabled, previewData);
+        }
+    }).join('');
+
+    // Add click handlers
+    containerEl.querySelectorAll('.file-item').forEach(item => {
+        const fileId = item.dataset.fileId;
+        const fileType = item.dataset.fileType;
+        const fileName = item.dataset.fileName;
+
+        item.addEventListener('click', () => handleFileClick(fileId, fileType, fileName));
+        item.addEventListener('dblclick', () => handleFileDoubleClick(fileId, fileType, fileName));
+    });
+}
+
+// Render grid item
+function renderGridItem(file, isSelected, isDisabled, previewData) {
+    const isFolder = file.type === 'folder';
+
+    let previewHTML = '';
+    if (isFolder && previewData && previewData.thumbnails.length > 0) {
+        previewHTML = `
+            <div class="folder-grid">
+                ${[0, 1, 2, 3].map(i => `
+                    <div class="folder-grid-item">
+                        ${previewData.thumbnails[i] ? `<img src="${previewData.thumbnails[i]}" alt="">` : ''}
+                        ${i === 3 && previewData.totalCount > 4 ? `<div class="folder-more">+${previewData.totalCount - 4}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else if (file.type === 'image' && file.thumbnailUrl) {
+        previewHTML = `<img src="${file.thumbnailUrl}" alt="${file.name}">`;
+    } else {
+        previewHTML = `<div style="padding: 1.25rem; background: ${file.type === 'folder' ? 'transparent' : 'rgba(30, 41, 59, 0.8)'};">${getFileIconSVG(file.type)}</div>`;
+    }
+
+    return `
+        <div class="file-item grid-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+             data-file-id="${file.id}"
+             data-file-type="${file.type}"
+             data-file-name="${file.name}">
+            <div class="check-icon">
+                <svg class="icon-sm">
+                    <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                    <path d="m9 12 2 2 4-4"></path>
+                </svg>
+            </div>
+            <div class="file-preview ${isFolder ? 'folder' : ''}">
+                ${previewHTML}
+                <div class="preview-overlay"></div>
+            </div>
+            <div class="file-info">
+                <div class="file-icon-small">
+                    ${getFileIconSVG(isFolder ? 'folder-small' : 'image-small')}
+                </div>
+                <div class="file-details">
+                    <div class="file-name" title="${file.name}">${file.name}</div>
+                    <div class="file-meta">
+                        <span class="file-size">${isFolder ? `${previewData?.totalCount || 0} รายการ` : file.size}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Render list item
+function renderListItem(file, isSelected, isDisabled, previewData) {
+    const isFolder = file.type === 'folder';
+
+    return `
+        <div class="file-item list-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
+             data-file-id="${file.id}"
+             data-file-type="${file.type}"
+             data-file-name="${file.name}">
+            <div class="list-icon-wrapper">
+                ${getFileIconSVG(isFolder ? 'folder-small' : 'image-small')}
+            </div>
+            <div class="list-file-name">
+                <p class="file-name" style="color: ${isSelected ? '#6366f1' : '#e2e8f0'};">${file.name}</p>
+            </div>
+            <div class="list-owner">${file.owner}</div>
+            <div class="list-modified">${file.modifiedAt}</div>
+            <div class="list-size">${isFolder ? `${previewData?.totalCount || 0} รายการ` : file.size}</div>
+        </div>
+    `;
+}
+
+// Handle navigation
+function handleNavigate(folderId, folderName) {
+    state.selectedIds.clear();
+    state.searchTerm = '';
+    document.getElementById('searchInput').value = '';
+    updateClearButton();
+
+    if (folderId === null) {
+        state.currentPath = [{ id: null, name: 'My Drive' }];
+    } else {
+        const existingIndex = state.currentPath.findIndex(p => p.id === folderId);
+        if (existingIndex !== -1) {
+            state.currentPath = state.currentPath.slice(0, existingIndex + 1);
+        } else {
+            state.currentPath.push({ id: folderId, name: folderName });
+        }
+    }
+
+    render();
+}
+
+// Handle file click
+function handleFileClick(fileId, fileType, fileName) {
+    if (state.selectFoldersOnly && fileType !== 'folder') return;
+
+    if (fileType === 'folder') {
+        if (state.selectFoldersOnly) {
+            toggleSelection(fileId);
+        } else {
+            handleNavigate(fileId, fileName);
+        }
+    } else {
+        if (!state.selectFoldersOnly) {
+            toggleSelection(fileId);
+        }
+    }
+}
+
+// Handle file double click
+function handleFileDoubleClick(fileId, fileType, fileName) {
+    if (fileType === 'folder') {
+        handleNavigate(fileId, fileName);
+    }
+}
+
+// Toggle selection
+function toggleSelection(fileId) {
+    if (state.selectedIds.has(fileId)) {
+        state.selectedIds.delete(fileId);
+    } else {
+        if (state.maxSelections === 1) {
+            state.selectedIds.clear();
+        }
+        if (state.selectedIds.size < state.maxSelections || state.maxSelections === 1) {
+            state.selectedIds.add(fileId);
+        }
+    }
+    updateSelection();
+}
+
+// Update selection UI
+function updateSelection() {
+    const count = state.selectedIds.size;
+    const badgeEl = document.getElementById('selectionBadge');
+    const emptyEl = document.getElementById('selectionEmpty');
+    const textEl = document.getElementById('selectionText');
+    const selectBtn = document.getElementById('selectBtn');
+
+    if (count > 0) {
+        badgeEl.style.display = 'inline-flex';
+        emptyEl.style.display = 'none';
+        textEl.textContent = `${count} ${state.selectFoldersOnly ? 'โฟลเดอร์' : 'ไฟล์'}ที่เลือก`;
+        selectBtn.disabled = false;
+    } else {
+        badgeEl.style.display = 'none';
+        emptyEl.style.display = 'inline';
+        selectBtn.disabled = !state.searchTerm;
+    }
+
+    renderFiles();
+}
+
+// Update clear button
+function updateClearButton() {
+    const clearBtn = document.getElementById('clearSearch');
+    if (state.searchTerm) {
+        clearBtn.classList.add('active');
+    } else {
+        clearBtn.classList.remove('active');
+    }
+}
+
+// Render all
+function render() {
+    renderBreadcrumbs();
+    renderFiles();
+    updateSelection();
+}
+
+// Open modal
+function openPicker(options = {}) {
+    state.selectFoldersOnly = options.selectFoldersOnly !== undefined ? options.selectFoldersOnly : true;
+    state.maxSelections = options.maxSelections || 1;
+    state.currentPath = [{ id: null, name: 'My Drive' }];
+    state.selectedIds.clear();
+    state.searchTerm = '';
+    state.viewMode = 'grid';
+
+    document.getElementById('modalTitle').textContent = state.selectFoldersOnly ? 'เลือกโฟลเดอร์' : 'เลือกไฟล์';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchInput').placeholder = state.selectFoldersOnly
+        ? 'ค้นหาโฟลเดอร์หรือวาง Google Drive link...'
+        : 'ค้นหาไฟล์หรือวาง Google Drive link...';
+
+    document.getElementById('cloudPicker').classList.add('active');
+    render();
+}
+
+// Close modal
+function closePicker() {
+    document.getElementById('cloudPicker').classList.remove('active');
+}
+
+// Handle select
+function handleSelect() {
+    const selectedFiles = MOCK_FILES.filter(f => state.selectedIds.has(f.id));
+    console.log('Selected files:', selectedFiles);
+
+    // Call callback if provided
+    if (window.onCloudPickerSelect) {
+        window.onCloudPickerSelect(selectedFiles);
+    }
+
+    closePicker();
+}
+
+// Event listeners
+document.getElementById('closeBtn').addEventListener('click', closePicker);
+document.getElementById('cancelBtn').addEventListener('click', closePicker);
+document.getElementById('selectBtn').addEventListener('click', handleSelect);
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    state.searchTerm = e.target.value;
+    updateClearButton();
+    render();
+});
+
+document.getElementById('clearSearch').addEventListener('click', () => {
+    state.searchTerm = '';
+    document.getElementById('searchInput').value = '';
+    updateClearButton();
+    render();
+});
+
+document.getElementById('gridViewBtn').addEventListener('click', () => {
+    state.viewMode = 'grid';
+    document.getElementById('gridViewBtn').classList.add('active');
+    document.getElementById('listViewBtn').classList.remove('active');
+    render();
+});
+
+document.getElementById('listViewBtn').addEventListener('click', () => {
+    state.viewMode = 'list';
+    document.getElementById('listViewBtn').classList.add('active');
+    document.getElementById('gridViewBtn').classList.remove('active');
+    render();
+});
+
+// Close on overlay click
+document.getElementById('cloudPicker').addEventListener('click', (e) => {
+    if (e.target.id === 'cloudPicker') {
+        closePicker();
+    }
+});
+
+// Export functions
+window.CloudPicker = {
+    open: openPicker,
+    close: closePicker
+};
+
+// Example usage:
+// window.CloudPicker.open({ selectFoldersOnly: true, maxSelections: 1 });
+// window.onCloudPickerSelect = (files) => { console.log('Selected:', files); };
+</script>
+
+</body>
+</html>
