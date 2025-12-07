@@ -827,11 +827,11 @@
                                                 <strong>📸 New Photos Detected!</strong>
                                                 <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem;">
                                                     <span id="new-photos-count-{{ event.id }}"></span> new photos found in Google Drive.
-                                                    Click below to index them.
+                                                    Click below to index them (fast - incremental only!).
                                                 </p>
                                             </div>
-                                            <a href="{{ url_for('start_indexing', event_id=event.id) }}" class="btn btn-secondary">
-                                                🔄 Index New Photos
+                                            <a href="{{ url_for('start_incremental_indexing', event_id=event.id) }}" class="btn btn-secondary">
+                                                ⚡ Index New Photos Only
                                             </a>
                                         </div>
                                     {% elif event.indexing_status == 'Failed' %}

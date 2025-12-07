@@ -605,6 +605,266 @@ def create_average_encoding(encodings):
     else:
         return np.mean(encodings, axis=0)
 
+def run_incremental_indexing_background(task, event_id, folder_id, credentials_dict):
+    """Run INCREMENTAL face indexing (only NEW photos) using Drive Changes API"""
+    db_conn = sqlite3.connect(DATABASE)
+    db_conn.row_factory = sqlite3.Row
+
+    try:
+        task.start()
+
+        # Validate credentials
+        required_fields = ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret']
+        missing_fields = [field for field in required_fields if field not in credentials_dict or not credentials_dict[field]]
+
+        if missing_fields:
+            error_msg = f"Missing required credential fields: {', '.join(missing_fields)}. Please re-authenticate."
+            logger.error(f"Task {task.id}: {error_msg}")
+            task.fail(error_msg)
+            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+            db_conn.commit()
+            return
+
+        # Build Google Drive service
+        creds = Credentials(**credentials_dict)
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Get event data
+        ensure_drive_token_column(db_conn)
+        event_data = db_conn.execute(
+            'SELECT name, drive_page_token FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
+
+        if not event_data:
+            task.fail("Event not found")
+            return
+
+        logger.info(f"INCREMENTAL Task {task.id}: Starting incremental indexing for Event: {event_data['name']}")
+
+        temp_files = []
+        page_token = event_data['drive_page_token']
+
+        # Get already indexed photos
+        indexed_photos_rows = db_conn.execute(
+            'SELECT DISTINCT photo_id FROM faces WHERE event_id = ?',
+            (event_id,)
+        ).fetchall()
+        indexed_ids = {row['photo_id'] for row in indexed_photos_rows}
+
+        # Also check checkpoints
+        checkpoints_rows = db_conn.execute(
+            'SELECT DISTINCT photo_id FROM indexing_checkpoints WHERE event_id = ?',
+            (event_id,)
+        ).fetchall()
+        checkpoint_ids = {row['photo_id'] for row in checkpoints_rows}
+
+        processed_ids = indexed_ids | checkpoint_ids
+
+        # Get NEW photos using Drive Changes API
+        new_photos = []
+
+        if not page_token:
+            # First time: get start token and do full list
+            logger.info(f"Task {task.id}: Initializing Drive Changes API...")
+            response = drive_service.changes().getStartPageToken().execute()
+            new_page_token = response.get('startPageToken')
+
+            # Do full list to get all photos
+            query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
+            results = drive_service.files().list(
+                q=query,
+                fields="files(id, name)",
+                pageSize=1000
+            ).execute()
+            all_photos = results.get('files', [])
+
+            # Filter for unprocessed photos
+            new_photos = [p for p in all_photos if p['id'] not in processed_ids]
+
+            # Save token
+            db_conn.execute(
+                'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                (new_page_token, event_id)
+            )
+            db_conn.commit()
+
+        else:
+            # Use Changes API to get only changed files
+            logger.info(f"Task {task.id}: Using Drive Changes API to find new photos...")
+            new_page_token = page_token
+
+            while True:
+                try:
+                    response = drive_service.changes().list(
+                        pageToken=new_page_token,
+                        spaces='drive',
+                        fields='nextPageToken, newStartPageToken, changes(fileId, file(id, name, mimeType, parents, trashed))',
+                        includeRemoved=True
+                    ).execute()
+
+                    changes = response.get('changes', [])
+
+                    # Filter for new images in our folder
+                    for change in changes:
+                        file_info = change.get('file')
+                        if not file_info:
+                            continue
+
+                        if (file_info.get('mimeType') in ['image/jpeg', 'image/png', 'image/jpg'] and
+                            folder_id in file_info.get('parents', []) and
+                            not file_info.get('trashed', False)):
+
+                            file_id = file_info['id']
+                            if file_id not in processed_ids:
+                                new_photos.append({'id': file_id, 'name': file_info['name']})
+
+                    # Update token
+                    if 'newStartPageToken' in response:
+                        new_page_token = response['newStartPageToken']
+                        break
+
+                    new_page_token = response.get('nextPageToken')
+                    if not new_page_token:
+                        break
+
+                except HttpError as e:
+                    if e.resp.status == 400:
+                        # Token expired, reinitialize
+                        logger.warning(f"Task {task.id}: Page token invalid, reinitializing...")
+                        response = drive_service.changes().getStartPageToken().execute()
+                        new_page_token = response.get('startPageToken')
+                        break
+                    raise
+
+            # Save new token
+            db_conn.execute(
+                'UPDATE events SET drive_page_token = ? WHERE id = ?',
+                (new_page_token, event_id)
+            )
+            db_conn.commit()
+
+        total_new_photos = len(new_photos)
+
+        if total_new_photos == 0:
+            logger.info(f"Task {task.id}: No new photos found. Incremental indexing complete.")
+            db_conn.execute(
+                "UPDATE events SET indexing_status = ? WHERE id = ?",
+                ('Completed', event_id)
+            )
+            db_conn.commit()
+            task.complete()
+            return
+
+        logger.info(f"Task {task.id}: Found {total_new_photos} NEW photos to index")
+
+        # Get current counts
+        current_data = db_conn.execute(
+            'SELECT indexed_photos, total_faces FROM events WHERE id = ?',
+            (event_id,)
+        ).fetchone()
+        indexed_photos = current_data['indexed_photos'] or 0
+        total_faces = current_data['total_faces'] or 0
+
+        # Process NEW photos only
+        new_indexed = 0
+        new_faces = 0
+
+        for i, photo in enumerate(new_photos):
+            photo_id = photo['id']
+            photo_name = photo['name']
+
+            task.update_progress(i, total_new_photos, photo_name, faces_found=total_faces + new_faces)
+            logger.debug(f"Task {task.id}: Processing NEW photo {i+1}/{total_new_photos}: {photo_name}")
+
+            faces_in_this_photo = 0
+            try:
+                # Download image to temp file
+                temp_path = download_image_temp(drive_service, photo_id)
+                if not temp_path:
+                    logger.warning(f"Task {task.id}: Skipping {photo_name} - download failed")
+                    continue
+
+                temp_files.append(temp_path)
+
+                # Extract face encodings
+                try:
+                    faces = extract_face_encodings(temp_path)
+                except ImageProcessingError as e:
+                    logger.warning(f"Task {task.id}: Skipping {photo_name} - {e}")
+                    new_indexed += 1
+                    continue
+
+                if faces:
+                    logger.debug(f"Task {task.id}: Found {len(faces)} faces in {photo_name}")
+                    for face_data in faces:
+                        encoding_blob = face_data['encoding'].tobytes()
+                        location_json = json.dumps(face_data['location'])
+
+                        db_conn.execute(
+                            'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
+                            (event_id, photo_id, photo_name, encoding_blob, location_json)
+                        )
+                        new_faces += 1
+                        faces_in_this_photo += 1
+                else:
+                    logger.debug(f"Task {task.id}: No faces found in {photo_name}")
+
+            except Exception as e:
+                logger.error(f"Task {task.id}: Error processing {photo_name}: {e}")
+
+            new_indexed += 1
+
+            # Save checkpoint
+            save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_in_this_photo)
+
+            # Update database progress
+            db_conn.execute(
+                "UPDATE events SET indexed_photos = ?, total_faces = ? WHERE id = ?",
+                (indexed_photos + new_indexed, total_faces + new_faces, event_id)
+            )
+            db_conn.commit()
+
+        # Update final status
+        db_conn.execute(
+            "UPDATE events SET indexing_status = ?, indexed_photos = ?, total_faces = ? WHERE id = ?",
+            ('Completed', indexed_photos + new_indexed, total_faces + new_faces, event_id)
+        )
+        db_conn.commit()
+
+        # Clear checkpoints
+        clear_checkpoints(db_conn, event_id)
+
+        # Invalidate cache
+        invalidate_cache(event_id)
+
+        task.complete()
+        logger.info(f"Task {task.id}: INCREMENTAL indexing completed. New Photos: {new_indexed}, New Faces: {new_faces}")
+
+    except HttpError as error:
+        error_msg = f'Google Drive API error: {error}'
+        logger.error(f"Task {task.id}: {error_msg}")
+        task.fail(error_msg)
+        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+        db_conn.commit()
+
+    except Exception as e:
+        error_msg = f'Unexpected error: {e}'
+        logger.error(f"Task {task.id}: {error_msg}", exc_info=True)
+        task.fail(error_msg)
+        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
+        db_conn.commit()
+
+    finally:
+        # Clean up temp files
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            except:
+                pass
+        db_conn.close()
+
 def run_indexing_background(task, event_id, folder_id, credentials_dict):
     """Run face indexing in background thread"""
     # Create new database connection for this thread
@@ -927,6 +1187,66 @@ def start_indexing(event_id):
     except Exception as e:
         logger.error(f"Error starting indexing: {e}", exc_info=True)
         return jsonify({'error': 'Failed to start indexing'}), 500
+
+@app.route('/start_incremental_indexing/<event_id>')
+def start_incremental_indexing(event_id):
+    """Start incremental indexing for NEW photos only (much faster!)"""
+    try:
+        event_id = validate_event_id(event_id)
+
+        db = get_db()
+        event_data = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+
+        if not event_data:
+            raise ValidationError('Event not found')
+
+        if 'credentials' not in session:
+            logger.warning("User not authenticated, redirecting to login")
+            return redirect(url_for('login_temp'))
+
+        credentials_dict = session['credentials']
+        required_fields = ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret']
+        missing_fields = [field for field in required_fields if field not in credentials_dict or not credentials_dict[field]]
+
+        if missing_fields:
+            logger.warning(f"Credentials missing fields: {missing_fields}. Forcing re-authentication.")
+            session.pop('credentials', None)
+            return redirect(url_for('login_temp'))
+
+        folder_id = event_data['drive_folder_id']
+        if not folder_id:
+            raise ValidationError('No Google Drive folder linked')
+
+        folder_id = validate_folder_id(folder_id)
+
+        # Create background task
+        task = create_task('incremental_indexing')
+
+        # Update status to In Progress
+        db.execute(
+            "UPDATE events SET indexing_status = ?, task_id = ? WHERE id = ?",
+            ('In Progress', task.id, event_id)
+        )
+        db.commit()
+
+        # Start background thread for INCREMENTAL indexing
+        thread = threading.Thread(
+            target=run_incremental_indexing_background,
+            args=(task, event_id, folder_id, credentials_dict)
+        )
+        thread.daemon = True
+        thread.start()
+
+        logger.info(f"Started INCREMENTAL indexing task {task.id} for event {event_id}")
+
+        return redirect(url_for('photographer_dashboard'))
+
+    except ValidationError as e:
+        logger.warning(f"Validation error in start_incremental_indexing: {e}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error starting incremental indexing: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to start incremental indexing'}), 500
 
 @app.route('/delete_event/<event_id>', methods=['POST'])
 def delete_event(event_id):
