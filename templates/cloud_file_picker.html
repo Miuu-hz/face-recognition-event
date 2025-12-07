@@ -1148,11 +1148,21 @@ document.getElementById('cloudPicker').addEventListener('click', (e) => {
     }
 });
 
+// Update files dynamically (for API integration)
+function updateCloudPickerFiles(files) {
+    // Replace MOCK_FILES with real data
+    MOCK_FILES.length = 0;
+    MOCK_FILES.push(...files);
+}
+
 // Export functions
 window.CloudPicker = {
     open: openPicker,
     close: closePicker
 };
+
+// Export update function for API integration
+window.updateCloudPickerFiles = updateCloudPickerFiles;
 
 // Example usage:
 // window.CloudPicker.open({ selectFoldersOnly: true, maxSelections: 1 });
