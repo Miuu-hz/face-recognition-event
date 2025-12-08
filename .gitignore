@@ -8,3 +8,5 @@ client_secrets.json
 *.db
 .venv/
 dlib/
+logs/
+logs/
