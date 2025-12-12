@@ -22,6 +22,11 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.http import MediaIoBaseDownload
 
+# Import face recognition services
+from services import face_encoder, face_matcher
+from services.face_encoder import ImageProcessingError as ServiceImageProcessingError
+from services.face_matcher import FaceMatcherError
+
 # Optional PostgreSQL support
 try:
     import psycopg2
@@ -78,6 +83,9 @@ class FaceRecognitionError(Exception):
 class ImageProcessingError(FaceRecognitionError):
     """Exception raised when image processing fails"""
     pass
+
+# Alias service exception for backward compatibility
+ImageProcessingError = ServiceImageProcessingError
 
 class GoogleDriveError(FaceRecognitionError):
     """Exception raised when Google Drive operations fail"""
@@ -295,64 +303,22 @@ FACE_RECOGNITION_CONFIG = {
     'num_jitters': int(os.getenv('NUM_JITTERS', '1')),
 }
 
-# --- In-Memory Encoding Cache ---
-# Cache structure: {event_id: {'encodings': np.array, 'photo_ids': list, 'photo_names': list, 'timestamp': datetime}}
-encoding_cache = {}
-cache_lock = threading.Lock()  # Thread-safe cache access
+# --- In-Memory Encoding Cache (delegated to services) ---
+# Use face_matcher.cache for all cache operations
 
 def get_cached_encodings(event_id):
-    """Get encodings from cache or database"""
-    with cache_lock:
-        if event_id in encoding_cache:
-            logger.debug(f"Cache HIT for event {event_id}")
-            return encoding_cache[event_id]
+    """Get encodings from cache or database (backward compatibility wrapper)"""
+    cache_data = face_matcher.cache.get(event_id)
+    if cache_data:
+        return cache_data
 
-    logger.debug(f"Cache MISS for event {event_id}, loading from database...")
-
-    # Load from database
+    # Load from database if not in cache
     db = get_db()
-    cursor = db.execute(
-        'SELECT photo_id, photo_name, face_encoding FROM faces WHERE event_id = ? ORDER BY indexed_at',
-        (event_id,)
-    )
-    rows = cursor.fetchall()
-
-    if not rows:
-        return None
-
-    # Convert to arrays
-    photo_ids = []
-    photo_names = []
-    stored_encodings = []
-
-    for row in rows:
-        photo_ids.append(row['photo_id'])
-        photo_names.append(row['photo_name'])
-        stored_encodings.append(np.frombuffer(row['face_encoding'], dtype=np.float64))
-
-    # Stack into 2D array
-    stored_encodings = np.array(stored_encodings)
-
-    # Cache it
-    cache_data = {
-        'encodings': stored_encodings,
-        'photo_ids': photo_ids,
-        'photo_names': photo_names,
-        'timestamp': datetime.now()
-    }
-
-    with cache_lock:
-        encoding_cache[event_id] = cache_data
-        logger.info(f"Cached {len(photo_ids)} encodings for event {event_id}")
-
-    return cache_data
+    return face_matcher.load_encodings_from_db(db, event_id)
 
 def invalidate_cache(event_id):
-    """Invalidate cache when event is re-indexed"""
-    with cache_lock:
-        if event_id in encoding_cache:
-            del encoding_cache[event_id]
-            logger.info(f"Cache invalidated for event {event_id}")
+    """Invalidate cache when event is re-indexed (backward compatibility wrapper)"""
+    face_matcher.cache.invalidate(event_id)
 
 # Print configuration on startup
 def print_config():
@@ -703,37 +669,18 @@ def download_image_temp(drive_service, photo_id):
                 raise GoogleDriveError(f"Failed to download image {photo_id}: {e}")
     return None
 
+# --- Face Encoding Functions (delegated to services) ---
 def extract_face_encodings(image_path):
-    """Extract face encodings from an image"""
-    try:
-        image = face_recognition.load_image_file(image_path)
-        face_locations = face_recognition.face_locations(image, model=FACE_RECOGNITION_CONFIG['model'])
-        face_encodings = face_recognition.face_encodings(image, face_locations)
-
-        results = []
-        for location, encoding in zip(face_locations, face_encodings):
-            results.append({
-                'encoding': encoding,
-                'location': {
-                    'top': location[0],
-                    'right': location[1],
-                    'bottom': location[2],
-                    'left': location[3]
-                }
-            })
-        return results
-    except Exception as e:
-        logger.error(f"Error extracting faces from {image_path}: {e}")
-        raise ImageProcessingError(f"Failed to extract faces from {image_path}: {e}")
+    """Extract face encodings from an image (backward compatibility wrapper)"""
+    return face_encoder.extract_face_encodings(
+        image_path,
+        model=FACE_RECOGNITION_CONFIG['model'],
+        num_jitters=FACE_RECOGNITION_CONFIG['num_jitters']
+    )
 
 def create_average_encoding(encodings):
-    """Create average encoding from multiple face encodings"""
-    if len(encodings) == 0:
-        return None
-    elif len(encodings) == 1:
-        return encodings[0]
-    else:
-        return np.mean(encodings, axis=0)
+    """Create average encoding from multiple face encodings (backward compatibility wrapper)"""
+    return face_encoder.create_average_encoding(encodings)
 
 def run_incremental_indexing_background(task, event_id, folder_id, credentials_dict):
     """Run INCREMENTAL face indexing (only NEW photos) using Drive Changes API"""
