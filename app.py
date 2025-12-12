@@ -23,9 +23,12 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.http import MediaIoBaseDownload
 
 # Import face recognition services
-from services import face_encoder, face_matcher
+from services import face_encoder, face_matcher, face_database, indexing_service, search_service
 from services.face_encoder import ImageProcessingError as ServiceImageProcessingError
 from services.face_matcher import FaceMatcherError
+from services.face_database import FaceDatabaseError
+from services.indexing_service import IndexingError
+from services.search_service import SearchError
 
 # Optional PostgreSQL support
 try:
@@ -348,105 +351,26 @@ def print_config():
         print(f"Path:         {DATABASE}")
     print("="*50 + "\n")
 
-# --- Checkpoint Management Functions ---
+# --- Checkpoint Management Functions (delegated to services) ---
 def ensure_checkpoint_table(db_conn):
-    """Ensure indexing_checkpoints table exists, create if missing (auto-migration)"""
-    try:
-        # Check if table exists
-        cursor = db_conn.execute("""
-            SELECT name FROM sqlite_master
-            WHERE type='table' AND name='indexing_checkpoints'
-        """)
-
-        if not cursor.fetchone():
-            logger.info("Creating indexing_checkpoints table (auto-migration)...")
-            # Create the table
-            db_conn.execute("""
-                CREATE TABLE indexing_checkpoints (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    event_id TEXT NOT NULL,
-                    photo_id TEXT NOT NULL,
-                    photo_name TEXT NOT NULL,
-                    faces_found INTEGER DEFAULT 0,
-                    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
-                )
-            """)
-
-            # Create indexes
-            db_conn.execute("""
-                CREATE INDEX idx_checkpoints_event ON indexing_checkpoints(event_id)
-            """)
-
-            db_conn.execute("""
-                CREATE INDEX idx_checkpoints_photo ON indexing_checkpoints(event_id, photo_id)
-            """)
-
-            db_conn.commit()
-            logger.info("✅ Successfully created indexing_checkpoints table - Resume feature is now available!")
-            return True
-        return True
-    except Exception as e:
-        logger.error(f"❌ Error ensuring checkpoint table: {e}")
-        return False
+    """Ensure indexing_checkpoints table exists (backward compatibility wrapper)"""
+    return face_database.ensure_checkpoint_table(db_conn)
 
 def get_checkpoints(db_conn, event_id):
-    """Get all processed photo IDs from checkpoints for an event"""
-    try:
-        if not ensure_checkpoint_table(db_conn):
-            return {}
-
-        cursor = db_conn.execute(
-            'SELECT photo_id, photo_name, faces_found FROM indexing_checkpoints WHERE event_id = ?',
-            (event_id,)
-        )
-        checkpoints = cursor.fetchall()
-        processed_ids = {row['photo_id']: {'name': row['photo_name'], 'faces': row['faces_found']} for row in checkpoints}
-        return processed_ids
-    except Exception as e:
-        logger.warning(f"Error getting checkpoints: {e}. Continuing without resume functionality.")
-        return {}
+    """Get all processed photo IDs from checkpoints (backward compatibility wrapper)"""
+    return face_database.get_checkpoints(db_conn, event_id)
 
 def save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_found):
-    """Save a checkpoint after processing a photo"""
-    try:
-        if not ensure_checkpoint_table(db_conn):
-            return
-
-        db_conn.execute(
-            'INSERT INTO indexing_checkpoints (event_id, photo_id, photo_name, faces_found) VALUES (?, ?, ?, ?)',
-            (event_id, photo_id, photo_name, faces_found)
-        )
-        db_conn.commit()
-    except Exception as e:
-        logger.warning(f"Failed to save checkpoint for {photo_name}: {e}")
+    """Save a checkpoint after processing a photo (backward compatibility wrapper)"""
+    face_database.save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_found)
 
 def clear_checkpoints(db_conn, event_id):
-    """Clear all checkpoints for an event (called on completion)"""
-    try:
-        if not ensure_checkpoint_table(db_conn):
-            return
-
-        db_conn.execute('DELETE FROM indexing_checkpoints WHERE event_id = ?', (event_id,))
-        db_conn.commit()
-        logger.info(f"Cleared checkpoints for event {event_id}")
-    except Exception as e:
-        logger.warning(f"Failed to clear checkpoints: {e}")
+    """Clear all checkpoints for an event (backward compatibility wrapper)"""
+    face_database.clear_checkpoints(db_conn, event_id)
 
 def count_checkpoints(db_conn, event_id):
-    """Count number of checkpoints for an event"""
-    try:
-        if not ensure_checkpoint_table(db_conn):
-            return 0
-
-        cursor = db_conn.execute(
-            'SELECT COUNT(*) as count FROM indexing_checkpoints WHERE event_id = ?',
-            (event_id,)
-        )
-        return cursor.fetchone()['count']
-    except Exception as e:
-        logger.warning(f"Error counting checkpoints: {e}")
-        return 0
+    """Count number of checkpoints for an event (backward compatibility wrapper)"""
+    return face_database.count_checkpoints(db_conn, event_id)
 
 # --- Background Task Management ---
 class Task:
@@ -641,33 +565,13 @@ def init_db():
         raise DatabaseError(f"Failed to initialize database: {e}")
     
 
-# --- Helper Functions for Face Recognition ---
+# --- Helper Functions for Face Recognition (delegated to services) ---
 def download_image_temp(drive_service, photo_id):
-    """Download image from Google Drive to temp file"""
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            request = drive_service.files().get_media(fileId=photo_id)
-            fh = io.BytesIO()
-            downloader = MediaIoBaseDownload(fh, request)
-            done = False
-            while not done:
-                status, done = downloader.next_chunk()
-
-            # Save to temp file
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
-            temp_file.write(fh.getvalue())
-            temp_file.close()
-            return temp_file.name
-        except Exception as e:
-            if attempt < max_retries - 1:
-                logger.warning(f"Failed to download image {photo_id} (attempt {attempt + 1}/{max_retries}): {e}")
-                import time
-                time.sleep(2 ** attempt)  # Exponential backoff
-            else:
-                logger.error(f"Error downloading image {photo_id} after {max_retries} attempts: {e}")
-                raise GoogleDriveError(f"Failed to download image {photo_id}: {e}")
-    return None
+    """Download image from Google Drive to temp file (backward compatibility wrapper)"""
+    try:
+        return indexing_service.download_image_from_drive(drive_service, photo_id, max_retries=3)
+    except IndexingError as e:
+        raise GoogleDriveError(str(e))
 
 # --- Face Encoding Functions (delegated to services) ---
 def extract_face_encodings(image_path):
@@ -683,442 +587,27 @@ def create_average_encoding(encodings):
     return face_encoder.create_average_encoding(encodings)
 
 def run_incremental_indexing_background(task, event_id, folder_id, credentials_dict):
-    """Run INCREMENTAL face indexing (only NEW photos) using Drive Changes API"""
+    """Run INCREMENTAL face indexing (delegated to services)"""
     db_conn = get_db_connection()
-
     try:
-        task.start()
-
-        # Validate credentials
-        required_fields = ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret']
-        missing_fields = [field for field in required_fields if field not in credentials_dict or not credentials_dict[field]]
-
-        if missing_fields:
-            error_msg = f"Missing required credential fields: {', '.join(missing_fields)}. Please re-authenticate."
-            logger.error(f"Task {task.id}: {error_msg}")
-            task.fail(error_msg)
-            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-            db_conn.commit()
-            return
-
-        # Build Google Drive service
-        creds = Credentials(**credentials_dict)
-        drive_service = build('drive', 'v3', credentials=creds)
-
-        # Get event data
-        ensure_drive_token_column(db_conn)
-        event_data = db_conn.execute(
-            'SELECT name, drive_page_token FROM events WHERE id = ?',
-            (event_id,)
-        ).fetchone()
-
-        if not event_data:
-            task.fail("Event not found")
-            return
-
-        logger.info(f"INCREMENTAL Task {task.id}: Starting incremental indexing for Event: {event_data['name']}")
-
-        temp_files = []
-        page_token = event_data['drive_page_token']
-
-        # Get already indexed photos
-        indexed_photos_rows = db_conn.execute(
-            'SELECT DISTINCT photo_id FROM faces WHERE event_id = ?',
-            (event_id,)
-        ).fetchall()
-        indexed_ids = {row['photo_id'] for row in indexed_photos_rows}
-
-        # Also check checkpoints
-        checkpoints_rows = db_conn.execute(
-            'SELECT DISTINCT photo_id FROM indexing_checkpoints WHERE event_id = ?',
-            (event_id,)
-        ).fetchall()
-        checkpoint_ids = {row['photo_id'] for row in checkpoints_rows}
-
-        processed_ids = indexed_ids | checkpoint_ids
-
-        # Get NEW photos using Drive Changes API
-        new_photos = []
-
-        if not page_token:
-            # First time: get start token and do full list
-            logger.info(f"Task {task.id}: Initializing Drive Changes API...")
-            response = drive_service.changes().getStartPageToken().execute()
-            new_page_token = response.get('startPageToken')
-
-            # Do full list to get all photos
-            query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
-            results = drive_service.files().list(
-                q=query,
-                fields="files(id, name)",
-                pageSize=1000
-            ).execute()
-            all_photos = results.get('files', [])
-
-            # Filter for unprocessed photos
-            new_photos = [p for p in all_photos if p['id'] not in processed_ids]
-
-            # Save token
-            db_conn.execute(
-                'UPDATE events SET drive_page_token = ? WHERE id = ?',
-                (new_page_token, event_id)
-            )
-            db_conn.commit()
-
-        else:
-            # Use Changes API to get only changed files
-            logger.info(f"Task {task.id}: Using Drive Changes API to find new photos...")
-            new_page_token = page_token
-
-            while True:
-                try:
-                    response = drive_service.changes().list(
-                        pageToken=new_page_token,
-                        spaces='drive',
-                        fields='nextPageToken, newStartPageToken, changes(fileId, file(id, name, mimeType, parents, trashed))',
-                        includeRemoved=True
-                    ).execute()
-
-                    changes = response.get('changes', [])
-
-                    # Filter for new images in our folder
-                    for change in changes:
-                        file_info = change.get('file')
-                        if not file_info:
-                            continue
-
-                        if (file_info.get('mimeType') in ['image/jpeg', 'image/png', 'image/jpg'] and
-                            folder_id in file_info.get('parents', []) and
-                            not file_info.get('trashed', False)):
-
-                            file_id = file_info['id']
-                            if file_id not in processed_ids:
-                                new_photos.append({'id': file_id, 'name': file_info['name']})
-
-                    # Update token
-                    if 'newStartPageToken' in response:
-                        new_page_token = response['newStartPageToken']
-                        break
-
-                    new_page_token = response.get('nextPageToken')
-                    if not new_page_token:
-                        break
-
-                except HttpError as e:
-                    if e.resp.status == 400:
-                        # Token expired, reinitialize
-                        logger.warning(f"Task {task.id}: Page token invalid, reinitializing...")
-                        response = drive_service.changes().getStartPageToken().execute()
-                        new_page_token = response.get('startPageToken')
-                        break
-                    raise
-
-            # Save new token
-            db_conn.execute(
-                'UPDATE events SET drive_page_token = ? WHERE id = ?',
-                (new_page_token, event_id)
-            )
-            db_conn.commit()
-
-        total_new_photos = len(new_photos)
-
-        if total_new_photos == 0:
-            logger.info(f"Task {task.id}: No new photos found. Incremental indexing complete.")
-            db_conn.execute(
-                "UPDATE events SET indexing_status = ? WHERE id = ?",
-                ('Completed', event_id)
-            )
-            db_conn.commit()
-            task.complete()
-            return
-
-        logger.info(f"Task {task.id}: Found {total_new_photos} NEW photos to index")
-
-        # Get current counts
-        current_data = db_conn.execute(
-            'SELECT indexed_photos, total_faces FROM events WHERE id = ?',
-            (event_id,)
-        ).fetchone()
-        indexed_photos = current_data['indexed_photos'] or 0
-        total_faces = current_data['total_faces'] or 0
-
-        # Process NEW photos only
-        new_indexed = 0
-        new_faces = 0
-
-        for i, photo in enumerate(new_photos):
-            photo_id = photo['id']
-            photo_name = photo['name']
-
-            task.update_progress(i, total_new_photos, photo_name, faces_found=total_faces + new_faces)
-            logger.debug(f"Task {task.id}: Processing NEW photo {i+1}/{total_new_photos}: {photo_name}")
-
-            faces_in_this_photo = 0
-            try:
-                # Download image to temp file
-                temp_path = download_image_temp(drive_service, photo_id)
-                if not temp_path:
-                    logger.warning(f"Task {task.id}: Skipping {photo_name} - download failed")
-                    continue
-
-                temp_files.append(temp_path)
-
-                # Extract face encodings
-                try:
-                    faces = extract_face_encodings(temp_path)
-                except ImageProcessingError as e:
-                    logger.warning(f"Task {task.id}: Skipping {photo_name} - {e}")
-                    new_indexed += 1
-                    continue
-
-                if faces:
-                    logger.debug(f"Task {task.id}: Found {len(faces)} faces in {photo_name}")
-                    for face_data in faces:
-                        encoding_blob = face_data['encoding'].tobytes()
-                        location_json = json.dumps(face_data['location'])
-
-                        db_conn.execute(
-                            'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
-                            (event_id, photo_id, photo_name, encoding_blob, location_json)
-                        )
-                        new_faces += 1
-                        faces_in_this_photo += 1
-                else:
-                    logger.debug(f"Task {task.id}: No faces found in {photo_name}")
-
-            except Exception as e:
-                logger.error(f"Task {task.id}: Error processing {photo_name}: {e}")
-
-            new_indexed += 1
-
-            # Save checkpoint
-            save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_in_this_photo)
-
-            # Update database progress
-            db_conn.execute(
-                "UPDATE events SET indexed_photos = ?, total_faces = ? WHERE id = ?",
-                (indexed_photos + new_indexed, total_faces + new_faces, event_id)
-            )
-            db_conn.commit()
-
-        # Update final status
-        db_conn.execute(
-            "UPDATE events SET indexing_status = ?, indexed_photos = ?, total_faces = ? WHERE id = ?",
-            ('Completed', indexed_photos + new_indexed, total_faces + new_faces, event_id)
+        indexing_service.run_incremental_indexing(
+            task, event_id, folder_id, credentials_dict, db_conn, FACE_RECOGNITION_CONFIG
         )
-        db_conn.commit()
-
-        # Clear checkpoints
-        clear_checkpoints(db_conn, event_id)
-
-        # Invalidate cache
+        # Invalidate cache after successful indexing
         invalidate_cache(event_id)
-
-        task.complete()
-        logger.info(f"Task {task.id}: INCREMENTAL indexing completed. New Photos: {new_indexed}, New Faces: {new_faces}")
-
-    except HttpError as error:
-        error_msg = f'Google Drive API error: {error}'
-        logger.error(f"Task {task.id}: {error_msg}")
-        task.fail(error_msg)
-        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-        db_conn.commit()
-
-    except Exception as e:
-        error_msg = f'Unexpected error: {e}'
-        logger.error(f"Task {task.id}: {error_msg}", exc_info=True)
-        task.fail(error_msg)
-        db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-        db_conn.commit()
-
     finally:
-        # Clean up temp files
-        for temp_file in temp_files:
-            try:
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
-            except:
-                pass
         db_conn.close()
 
 def run_indexing_background(task, event_id, folder_id, credentials_dict):
-    """Run face indexing in background thread"""
-    # Create new database connection for this thread
+    """Run full face indexing (delegated to services)"""
     db_conn = get_db_connection()
-
     try:
-        task.start()
-
-        # Validate credentials have all necessary fields
-        required_fields = ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret']
-        missing_fields = [field for field in required_fields if field not in credentials_dict or not credentials_dict[field]]
-
-        if missing_fields:
-            error_msg = f"Missing required credential fields: {', '.join(missing_fields)}. Please re-authenticate."
-            logger.error(f"Task {task.id}: {error_msg}")
-            task.fail(error_msg)
-            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-            db_conn.commit()
-            return
-
-        # Build Google Drive service
-        creds = Credentials(**credentials_dict)
-        drive_service = build('drive', 'v3', credentials=creds)
-
-        # Get event data
-        event_data = db_conn.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
-        if not event_data:
-            task.fail("Event not found")
-            return
-
-        logger.info(f"Background Task {task.id}: Starting Face Indexing for Event: {event_data['name']}")
-
-        indexed_photos = 0
-        total_faces = 0
-        temp_files = []  # Track temp files for cleanup
-
-        try:
-            # Check for existing checkpoints (resume functionality)
-            processed_photos = get_checkpoints(db_conn, event_id)
-            resuming = len(processed_photos) > 0
-
-            if resuming:
-                # Resume from previous progress
-                logger.info(f"Task {task.id}: Resuming from checkpoint - {len(processed_photos)} photos already processed")
-                # Count faces from checkpoints
-                total_faces = sum(p['faces'] for p in processed_photos.values())
-                indexed_photos = len(processed_photos)
-            else:
-                logger.info(f"Task {task.id}: Starting fresh indexing (no checkpoints found)")
-
-            # Get all images from the folder
-            query = f"'{folder_id}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/jpg') and trashed=false"
-            results = drive_service.files().list(
-                q=query,
-                fields="files(id, name)",
-                pageSize=100
-            ).execute()
-            photos = results.get('files', [])
-
-            total_photos = len(photos)
-            task.update_progress(indexed_photos, total_photos, None, faces_found=total_faces)
-
-            if resuming:
-                logger.info(f"Task {task.id}: Found {total_photos} total photos ({len(processed_photos)} already done, {total_photos - len(processed_photos)} remaining)")
-            else:
-                logger.info(f"Task {task.id}: Found {total_photos} photos to process")
-
-            # Process photos in batches
-            batch_size = FACE_RECOGNITION_CONFIG['batch_size']
-            for i in range(0, len(photos), batch_size):
-                batch = photos[i:i+batch_size]
-                logger.debug(f"Task {task.id}: Processing batch {i//batch_size + 1} ({len(batch)} photos)")
-
-                for photo in batch:
-                    photo_id = photo['id']
-                    photo_name = photo['name']
-
-                    # Skip if already processed (resume functionality)
-                    if photo_id in processed_photos:
-                        logger.debug(f"Task {task.id}: Skipping {photo_name} (already processed)")
-                        continue
-
-                    # Update task progress
-                    task.update_progress(indexed_photos, total_photos, photo_name, faces_found=total_faces)
-                    logger.debug(f"Task {task.id}: Processing {photo_name}")
-
-                    faces_in_this_photo = 0
-                    try:
-                        # Download image to temp file
-                        temp_path = download_image_temp(drive_service, photo_id)
-                        if not temp_path:
-                            logger.warning(f"Task {task.id}: Skipping {photo_name} - download failed")
-                            continue
-
-                        temp_files.append(temp_path)
-
-                        # Extract face encodings
-                        try:
-                            faces = extract_face_encodings(temp_path)
-                        except ImageProcessingError as e:
-                            logger.warning(f"Task {task.id}: Skipping {photo_name} - {e}")
-                            indexed_photos += 1
-                            continue
-
-                        if faces:
-                            logger.debug(f"Task {task.id}: Found {len(faces)} faces in {photo_name}")
-                            for face_data in faces:
-                                # Convert encoding to blob for storage
-                                encoding_blob = face_data['encoding'].tobytes()
-                                location_json = json.dumps(face_data['location'])
-
-                                # Save to database
-                                db_conn.execute(
-                                    'INSERT INTO faces (event_id, photo_id, photo_name, face_encoding, face_location) VALUES (?, ?, ?, ?, ?)',
-                                    (event_id, photo_id, photo_name, encoding_blob, location_json)
-                                )
-                                total_faces += 1
-                                faces_in_this_photo += 1
-                        else:
-                            logger.debug(f"Task {task.id}: No faces found in {photo_name}")
-
-                    except Exception as e:
-                        logger.error(f"Task {task.id}: Error processing {photo_name}: {e}")
-                        # Continue with next photo
-
-                    indexed_photos += 1
-
-                    # Save checkpoint for resume functionality
-                    save_checkpoint(db_conn, event_id, photo_id, photo_name, faces_in_this_photo)
-
-                    # Update database progress
-                    db_conn.execute(
-                        "UPDATE events SET indexed_photos = ?, total_faces = ? WHERE id = ?",
-                        (indexed_photos, total_faces, event_id)
-                    )
-                    db_conn.commit()
-
-            # Update final status
-            db_conn.execute(
-                "UPDATE events SET indexing_status = ?, indexed_photos = ?, total_faces = ? WHERE id = ?",
-                ('Completed', indexed_photos, total_faces, event_id)
-            )
-            db_conn.commit()
-
-            # Clear checkpoints on successful completion
-            clear_checkpoints(db_conn, event_id)
-
-            # Invalidate cache so next search will use fresh data
-            invalidate_cache(event_id)
-
-            task.complete()
-            logger.info(f"Task {task.id}: Indexing completed successfully. Photos: {indexed_photos}, Faces: {total_faces}")
-
-        except HttpError as error:
-            error_msg = f'Google Drive API error: {error}'
-            logger.error(f"Task {task.id}: {error_msg}")
-            task.fail(error_msg)
-            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-            db_conn.commit()
-
-        except Exception as e:
-            error_msg = f'Unexpected error: {e}'
-            logger.error(f"Task {task.id}: {error_msg}", exc_info=True)
-            task.fail(error_msg)
-            db_conn.execute("UPDATE events SET indexing_status = ? WHERE id = ?", ('Failed', event_id))
-            db_conn.commit()
-
-        finally:
-            # Clean up temp files
-            for temp_file in temp_files:
-                try:
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                except:
-                    pass
-
+        indexing_service.run_full_indexing(
+            task, event_id, folder_id, credentials_dict, db_conn, FACE_RECOGNITION_CONFIG
+        )
+        # Invalidate cache after successful indexing
+        invalidate_cache(event_id)
     finally:
-        # Close database connection
         db_conn.close()
 
 @app.cli.command('init-db')
@@ -1615,21 +1104,8 @@ def pause_indexing(event_id):
         return jsonify({'error': str(e)}), 500
 
 def ensure_drive_token_column(db_conn):
-    """Ensure drive_page_token column exists in events table"""
-    try:
-        cursor = db_conn.execute("PRAGMA table_info(events)")
-        columns = [column[1] for column in cursor.fetchall()]
-
-        if 'drive_page_token' not in columns:
-            logger.info("Adding drive_page_token column to events table (auto-migration)...")
-            db_conn.execute("ALTER TABLE events ADD COLUMN drive_page_token TEXT")
-            db_conn.commit()
-            logger.info("✅ Successfully added drive_page_token column")
-            return True
-        return True
-    except Exception as e:
-        logger.error(f"❌ Error ensuring drive_page_token column: {e}")
-        return False
+    """Ensure drive_page_token column exists (backward compatibility wrapper)"""
+    return indexing_service.ensure_drive_token_column(db_conn)
 
 @app.route('/api/event/<event_id>/new_photos')
 def check_new_photos(event_id):
@@ -1856,126 +1332,36 @@ def search_faces(event_id):
         # Validate event ID
         event_id = validate_event_id(event_id)
 
+        # Validate uploaded files
         if 'selfie_images' not in request.files:
             raise ValidationError("No images uploaded")
 
         files = request.files.getlist('selfie_images')
-        if len(files) == 0 or files[0].filename == '':
-            raise ValidationError("No selected files")
+        search_service.validate_uploaded_files(files, max_files=3, max_size_mb=10)
 
-        if len(files) > 3:
-            raise ValidationError("Maximum 3 images allowed")
+        # Perform search using service
+        db = get_db()
+        result = search_service.search_faces_by_selfies(
+            db,
+            event_id,
+            files,
+            tolerance=FACE_RECOGNITION_CONFIG['tolerance'],
+            config=FACE_RECOGNITION_CONFIG
+        )
 
-        # Validate each file
-        for file in files:
-            if file and file.filename != '':
-                validate_image_file(file)
+        # Extract URLs for template
+        photo_urls = [match['url'] for match in result['matches']]
 
-        # Process uploaded images
-        uploaded_encodings = []
-        temp_files = []
+        logger.info(f"Search completed: {result['total_matches']} matches found")
 
-        try:
-            # Extract face encodings from uploaded images
-            for file in files:
-                if file and file.filename != '':
-                    # Save uploaded file to temp
-                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
-                    file.save(temp_file.name)
-                    temp_files.append(temp_file.name)
+        return render_template('results_page.html',
+                             photo_links=photo_urls,
+                             event_id=event_id,
+                             matches_count=result['total_matches'])
 
-                    # Extract face encodings
-                    try:
-                        faces = extract_face_encodings(temp_file.name)
-                        if faces:
-                            # Use first face found in each image
-                            uploaded_encodings.append(faces[0]['encoding'])
-                            logger.debug(f"Found face in uploaded image: {file.filename}")
-                    except ImageProcessingError as e:
-                        logger.warning(f"Skipping {file.filename}: {e}")
-        
-            if not uploaded_encodings:
-                raise ValidationError("No faces detected in uploaded photos. Please try again with clear face photos")
-
-            # Create average encoding from uploaded faces
-            search_encoding = create_average_encoding(uploaded_encodings)
-            logger.info(f"Created average encoding from {len(uploaded_encodings)} face(s) for event {event_id}")
-
-            # Search in database - OPTIMIZED with cache + vectorized comparison
-            cache_data = get_cached_encodings(event_id)
-
-            if not cache_data:
-                logger.info(f"No faces found for event {event_id}")
-                matching_photos = {}
-                faces_checked = 0
-            else:
-                # Get data from cache (already in optimal format!)
-                stored_encodings = cache_data['encodings']
-                photo_ids = cache_data['photo_ids']
-                photo_names = cache_data['photo_names']
-                faces_checked = len(photo_ids)
-
-                # Vectorized distance calculation (10-50x faster than loop!)
-                distances = face_recognition.face_distance(stored_encodings, search_encoding)
-
-                # Find matches
-                matching_photos = {}
-                tolerance = FACE_RECOGNITION_CONFIG['tolerance']
-
-                for idx, distance in enumerate(distances):
-                    if distance <= tolerance:
-                        photo_id = photo_ids[idx]
-                        photo_name = photo_names[idx]
-
-                        # Keep best match for each photo
-                        if photo_id not in matching_photos:
-                            matching_photos[photo_id] = {
-                                'name': photo_name,
-                                'distance': float(distance)
-                            }
-                        else:
-                            if distance < matching_photos[photo_id]['distance']:
-                                matching_photos[photo_id]['distance'] = float(distance)
-
-                        logger.debug(f"Match found: {photo_name} (distance: {distance:.3f})")
-
-            logger.info(f"Search completed for event {event_id}: Checked {faces_checked} faces, found {len(matching_photos)} matching photos (cached + vectorized)")
-
-            # Convert to Google Drive links
-            photo_links = []
-            for photo_id, photo_info in matching_photos.items():
-                photo_links.append({
-                    'url': f"https://drive.google.com/file/d/{photo_id}/view",
-                    'name': photo_info['name'],
-                    'distance': photo_info['distance']
-                })
-
-            # Sort by best match (lowest distance)
-            photo_links.sort(key=lambda x: x['distance'])
-
-            # Return results
-            return render_template('results_page.html',
-                                 photo_links=[p['url'] for p in photo_links],
-                                 event_id=event_id,
-                                 matches_count=len(photo_links))
-
-        except ImageProcessingError as e:
-            logger.error(f"Image processing error in search_faces: {e}")
-            return f"Failed to process images: {str(e)}", 400
-
-        except Exception as e:
-            logger.error(f"Error in search_faces: {e}", exc_info=True)
-            return f"An error occurred while processing: {str(e)}", 500
-
-        finally:
-            # Clean up temp files
-            for temp_file in temp_files:
-                try:
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                except:
-                    pass
-
+    except SearchError as e:
+        logger.error(f"Search error: {e}")
+        return str(e), 400
     except ValidationError as e:
         logger.warning(f"Validation error in search_faces: {e}")
         return str(e), 400
