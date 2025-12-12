@@ -52,20 +52,27 @@ def setup_logging():
     logger = logging.getLogger('face_recognition_app')
     logger.setLevel(logging.DEBUG if os.getenv('DEBUG', 'True').lower() == 'true' else logging.INFO)
 
-    # Console handler
+    # Console handler with UTF-8 support
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_format = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     console_handler.setFormatter(console_format)
 
-    # File handler for all logs
-    file_handler = RotatingFileHandler('logs/app.log', maxBytes=10*1024*1024, backupCount=5)
+    # Fix encoding for Windows console (support Thai characters)
+    if hasattr(console_handler.stream, 'reconfigure'):
+        try:
+            console_handler.stream.reconfigure(encoding='utf-8', errors='replace')
+        except:
+            pass
+
+    # File handler for all logs (UTF-8 encoding)
+    file_handler = RotatingFileHandler('logs/app.log', maxBytes=10*1024*1024, backupCount=5, encoding='utf-8')
     file_handler.setLevel(logging.DEBUG)
     file_format = logging.Formatter('[%(asctime)s] %(levelname)s [%(name)s:%(lineno)d] - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     file_handler.setFormatter(file_format)
 
-    # Error file handler
-    error_handler = RotatingFileHandler('logs/error.log', maxBytes=10*1024*1024, backupCount=5)
+    # Error file handler (UTF-8 encoding)
+    error_handler = RotatingFileHandler('logs/error.log', maxBytes=10*1024*1024, backupCount=5, encoding='utf-8')
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(file_format)
 
