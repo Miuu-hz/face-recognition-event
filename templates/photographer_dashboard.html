@@ -1069,7 +1069,7 @@
                     const response = await fetch(`/api/folder_preview/${folder.id}`);
                     if (response.ok) {
                         const data = await response.json();
-                        updateFolderCardUI(folder.id, data.thumbnails, data.totalCount);
+                        updateFolderCardUI(folder.id, data);
                     }
                 } catch (error) {
                     console.error(`Error fetching preview for folder ${folder.id}:`, error);
@@ -1078,84 +1078,46 @@
         }
 
         // Update folder card UI with 2x2 thumbnail grid
-        function updateFolderCardUI(folderId, thumbnails, totalCount) {
-            // Find folder card in DOM
-            const folderCards = document.querySelectorAll('.file-card');
-            let targetCard = null;
+        function updateFolderCardUI(folderId, data) {
+            // หา Element ของโฟลเดอร์นั้นในหน้าจอ (อิงจาก data-file-id ที่ cloud_file_picker.html สร้างไว้)
+            const fileItem = document.querySelector(`.file-item[data-file-id="${folderId}"]`);
+            if (!fileItem) return;
 
-            for (const card of folderCards) {
-                if (card.dataset.fileId === folderId) {
-                    targetCard = card;
-                    break;
+            // 1. อัปเดตส่วนรูปภาพ (Grid 4 รูป)
+            const previewDiv = fileItem.querySelector('.file-preview');
+            if (previewDiv && data.thumbnails && data.thumbnails.length > 0) {
+                let gridHtml = '<div class="folder-grid">';
+
+                // สร้าง 4 ช่อง
+                for (let i = 0; i < 4; i++) {
+                    gridHtml += '<div class="folder-grid-item">';
+                    if (data.thumbnails[i]) {
+                        gridHtml += `<img src="${data.thumbnails[i]}" referrerpolicy="no-referrer">`;
+                    }
+                    // ถ้าเป็นช่องสุดท้ายและมีรูปเยอะกว่า 4 รูป ให้ใส่เลขบอกจำนวน
+                    if (i === 3 && data.totalCount > 4) {
+                         gridHtml += `<div class="folder-more">+${data.totalCount - 4}</div>`;
+                    }
+                    gridHtml += '</div>';
                 }
+                gridHtml += '</div>';
+
+                // ลบ Icon เก่าออก แล้วใส่ Grid รูปเข้าไปแทน
+                previewDiv.innerHTML = gridHtml + '<div class="preview-overlay"></div>';
+                previewDiv.classList.add('folder'); // เพื่อให้ CSS ตัดขอบมน
             }
 
-            if (!targetCard) return;
+            // 2. อัปเดตส่วนข้อความจำนวนรูป (Size)
+            const sizeDiv = fileItem.querySelector('.file-size');
+            if (sizeDiv) {
+                const countText = data.hasMore ? '99+' : data.totalCount;
+                sizeDiv.textContent = `${countText} รูป`;
+            }
 
-            const previewDiv = targetCard.querySelector('.file-preview');
-            if (!previewDiv) return;
-
-            // Clear existing content
-            previewDiv.innerHTML = '';
-
-            if (thumbnails && thumbnails.length > 0) {
-                // Create 2x2 grid
-                const gridDiv = document.createElement('div');
-                gridDiv.style.display = 'grid';
-                gridDiv.style.gridTemplateColumns = '1fr 1fr';
-                gridDiv.style.gridTemplateRows = '1fr 1fr';
-                gridDiv.style.width = '100%';
-                gridDiv.style.height = '100%';
-                gridDiv.style.gap = '2px';
-
-                // Add up to 4 thumbnails
-                for (let i = 0; i < Math.min(4, thumbnails.length); i++) {
-                    const img = document.createElement('img');
-                    img.src = thumbnails[i];
-                    img.style.width = '100%';
-                    img.style.height = '100%';
-                    img.style.objectFit = 'cover';
-                    img.alt = `Preview ${i + 1}`;
-
-                    // Add "+X more" overlay on 4th image if there are more than 4 images
-                    if (i === 3 && totalCount > 4) {
-                        const wrapper = document.createElement('div');
-                        wrapper.style.position = 'relative';
-                        wrapper.style.width = '100%';
-                        wrapper.style.height = '100%';
-
-                        const overlay = document.createElement('div');
-                        overlay.className = 'folder-more';
-                        overlay.textContent = `+${totalCount - 4}`;
-                        overlay.style.position = 'absolute';
-                        overlay.style.top = '0';
-                        overlay.style.left = '0';
-                        overlay.style.width = '100%';
-                        overlay.style.height = '100%';
-                        overlay.style.display = 'flex';
-                        overlay.style.alignItems = 'center';
-                        overlay.style.justifyContent = 'center';
-                        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-                        overlay.style.color = '#fff';
-                        overlay.style.fontSize = '1.5rem';
-                        overlay.style.fontWeight = 'bold';
-
-                        wrapper.appendChild(img);
-                        wrapper.appendChild(overlay);
-                        gridDiv.appendChild(wrapper);
-                    } else {
-                        gridDiv.appendChild(img);
-                    }
-                }
-
-                previewDiv.appendChild(gridDiv);
-            } else {
-                // No images, show folder icon
-                const icon = document.createElement('i');
-                icon.className = 'fa-solid fa-folder';
-                icon.style.fontSize = '3rem';
-                icon.style.color = '#64748b';
-                previewDiv.appendChild(icon);
+            // อัปเดต List View ด้วย (ถ้าเปิดโหมด List อยู่)
+            const listSizeDiv = fileItem.querySelector('.list-size');
+            if (listSizeDiv) {
+                listSizeDiv.textContent = `${data.totalCount} รูป`;
             }
         }
 
