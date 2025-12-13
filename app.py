@@ -954,6 +954,76 @@ def get_folders():
         print(f'An error occurred: {error}')
         return jsonify({'error': 'Failed to fetch folders'}), 500
 
+@app.route('/api/folder_preview/<folder_id>')
+def get_folder_preview(folder_id):
+    """Get preview thumbnails and count for a folder"""
+    if 'credentials' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    try:
+        creds = Credentials(**session['credentials'])
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        # Query for images in the folder
+        query = f"'{folder_id}' in parents and (mimeType contains 'image/') and trashed=false"
+        results = drive_service.files().list(
+            q=query,
+            pageSize=100,
+            fields="files(id, thumbnailLink), nextPageToken"
+        ).execute()
+
+        files = results.get('files', [])
+        thumbnails = [f['thumbnailLink'] for f in files if 'thumbnailLink' in f][:4]
+        total_count = len(files)
+
+        # If there's a next page, we have 100+ images
+        if 'nextPageToken' in results:
+            total_count = 100  # Show as 99+
+
+        return jsonify({
+            'thumbnails': thumbnails,
+            'totalCount': total_count,
+            'hasMore': 'nextPageToken' in results
+        })
+    except HttpError as error:
+        logger.error(f'Error fetching folder preview: {error}')
+        return jsonify({'error': 'Failed to fetch folder preview'}), 500
+
+@app.route('/api/shared_folders')
+def get_shared_folders():
+    """Get folders shared with me"""
+    if 'credentials' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    try:
+        creds = Credentials(**session['credentials'])
+        drive_service = build('drive', 'v3', credentials=creds)
+
+        results = drive_service.files().list(
+            q="mimeType='application/vnd.google-apps.folder' and trashed=false and sharedWithMe=true",
+            pageSize=100,
+            fields="files(id, name, owners)",
+            orderBy="name"
+        ).execute()
+
+        folders = results.get('files', [])
+
+        # Format with owner information
+        formatted = []
+        for folder in folders:
+            owners = folder.get('owners', [])
+            owner_name = owners[0].get('displayName', 'Unknown') if owners else 'Unknown'
+            formatted.append({
+                'id': folder['id'],
+                'name': folder['name'],
+                'owner': owner_name
+            })
+
+        return jsonify(formatted), 200
+    except HttpError as error:
+        logger.error(f'Error fetching shared folders: {error}')
+        return jsonify({'error': 'Failed to fetch shared folders'}), 500
+
 @app.route('/api/task/<task_id>')
 def get_task_status(task_id):
     """Get status of a background task"""
