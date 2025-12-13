@@ -715,3 +715,85 @@ sqlite3.OperationalError: no such table: indexing_checkpoints
 [2025-12-03 23:22:08] DEBUG [face_recognition_app:655] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Found 3 faces in 592131384_1704586957545020_5887388887039601685_n.jpg
 [2025-12-03 23:22:08] INFO [face_recognition_app:351] - Cleared checkpoints for event e91a6eef-6e8a-4076-9193-930dd9301a21
 [2025-12-03 23:22:08] INFO [face_recognition_app:698] - Task da8cf7a4-697f-44e1-afc5-d19347b66826: Indexing completed successfully. Photos: 1, Faces: 3
+[2025-12-12 12:50:24] WARNING [face_recognition_app:1376] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-12 12:50:43] INFO [face_recognition_app:1318] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-12 12:50:43] DEBUG [face_recognition_app:1192] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484507
+[2025-12-12 12:50:44] DEBUG [face_recognition_app:1254] - Updated page token for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-12 12:50:47] WARNING [face_recognition_app:1376] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-12 12:51:11] DEBUG [face_recognition_app:296] - Validation passed: 1 files
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:1192] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484550
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb3.jpg (distance: 0.421)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: b&f1.jpg (distance: 0.446)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: b&f2.jpg (distance: 0.481)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb8.jpg (distance: 0.432)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: none.jpg (distance: 0.482)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb1.jpg (distance: 0.423)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb2.jpg (distance: 0.000)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb5.jpg (distance: 0.374)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb6.jpg (distance: 0.474)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb7.jpg (distance: 0.463)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb9.jpg (distance: 0.490)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: New B.jpg (distance: 0.468)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb3.jpg (distance: 0.421)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: b&f1.jpg (distance: 0.446)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: b&f2.jpg (distance: 0.481)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb8.jpg (distance: 0.432)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: none.jpg (distance: 0.482)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb1.jpg (distance: 0.423)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb2.jpg (distance: 0.000)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb5.jpg (distance: 0.374)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb6.jpg (distance: 0.474)
+[2025-12-12 12:51:14] DEBUG [face_recognition_app:253] - Match: bb7.jpg (distance: 0.463)
+[2025-12-12 12:51:14] INFO [face_recognition_app:1355] - Search completed: 12 matches found
+[2025-12-12 12:51:44] DEBUG [face_recognition_app:1192] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484550
+[2025-12-12 12:52:13] DEBUG [face_recognition_app:1192] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484550
+[2025-12-12 13:01:32] WARNING [face_recognition_app:1383] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-12 13:01:46] DEBUG [face_recognition_app:296] - Validation passed: 1 files
+[2025-12-12 13:01:46] INFO [face_recognition_app:140] - เริ่มค้นหาสำหรับ event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 ด้วย 1 selfies
+[2025-12-12 13:01:46] DEBUG [face_recognition_app:53] - ประมวลผล selfie: bb2.jpg
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:150] - พบ 1 ใบหน้าใน C:\Users\acer\AppData\Local\Temp\tmpew5swtq6.jpg
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:66] - พบใบหน้าใน bb2.jpg
+[2025-12-12 13:01:48] INFO [face_recognition_app:147] - ประมวลผล selfies สำเร็จ: พบ 1 ใบหน้า
+[2025-12-12 13:01:48] INFO [face_recognition_app:155] - ใช้ encoding จากภาพเดียว
+[2025-12-12 13:01:48] INFO [face_recognition_app:158] - เริ่มค้นหาใน database (tolerance=0.5)...
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:67] - Cache MISS สำหรับ event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-12 13:01:48] INFO [face_recognition_app:168] - โหลดจาก DB: 95 encodings สำหรับ event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-12 13:01:48] INFO [face_recognition_app:88] - Cache SET: 95 encodings สำหรับ event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:65] - Cache HIT สำหรับ event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb3.jpg (distance: 0.421)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: b&f1.jpg (distance: 0.446)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: b&f2.jpg (distance: 0.481)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb8.jpg (distance: 0.432)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: none.jpg (distance: 0.482)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb1.jpg (distance: 0.423)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb2.jpg (distance: 0.000)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb5.jpg (distance: 0.374)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb6.jpg (distance: 0.474)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb7.jpg (distance: 0.463)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb9.jpg (distance: 0.490)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: New B.jpg (distance: 0.468)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb3.jpg (distance: 0.421)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: b&f1.jpg (distance: 0.446)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: b&f2.jpg (distance: 0.481)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb8.jpg (distance: 0.432)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: none.jpg (distance: 0.482)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb1.jpg (distance: 0.423)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb2.jpg (distance: 0.000)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb5.jpg (distance: 0.374)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb6.jpg (distance: 0.474)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:253] - Match: bb7.jpg (distance: 0.463)
+[2025-12-12 13:01:48] INFO [face_recognition_app:259] - ค้นหาเสร็จสิ้น event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5: ตรวจสอบ 95 ใบหน้า, พบ 12 ภาพที่ตรงกัน (ใช้ cache)
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:65] - Cache HIT สำหรับ event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-12 13:01:48] INFO [face_recognition_app:171] - ค้นหาเสร็จสิ้น: ตรวจสอบ 95 ใบหน้า, พบ 12 ภาพ
+[2025-12-12 13:01:48] DEBUG [face_recognition_app:104] - ลบ temp file: C:\Users\acer\AppData\Local\Temp\tmpew5swtq6.jpg
+[2025-12-12 13:01:48] INFO [face_recognition_app:1362] - Search completed: 12 matches found
+[2025-12-13 22:31:38] WARNING [face_recognition_app:1383] - 404 error: http://127.0.0.1:5000/favicon.ico
+[2025-12-13 22:32:33] INFO [face_recognition_app:1325] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-13 22:32:34] DEBUG [face_recognition_app:1199] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484550
+[2025-12-13 22:32:34] DEBUG [face_recognition_app:1261] - Updated page token for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5
+[2025-12-13 22:32:37] WARNING [face_recognition_app:1383] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-13 22:34:47] INFO [face_recognition_app:1325] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-13 22:34:47] DEBUG [face_recognition_app:1199] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484585
+[2025-12-13 22:34:49] WARNING [face_recognition_app:1383] - 404 error: http://127.0.0.1:5000/api/shared_folders
+[2025-12-13 23:04:53] INFO [face_recognition_app:1395] - Successfully authenticated and stored credentials with refresh_token
+[2025-12-13 23:04:53] DEBUG [face_recognition_app:1269] - Checking Drive changes for event 4824acf6-bfa1-4bf6-b61b-85a95dfe7dd5 with token 484585
