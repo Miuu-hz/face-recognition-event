@@ -768,13 +768,10 @@
                                             {% set progress_width = ((event.indexed_photos / (event.indexed_photos + 1)) * 100) | round(1) if event.indexed_photos and event.indexed_photos > 0 else 0 %}
                                             <div style="margin-bottom: 1rem;">
                                                 <div class="progress-container">
-                                                    <div class="progress-bar" id="progress-bar-{{ event.id }}">
+                                                    <div class="progress-bar" id="progress-bar-{{ event.id }}" data-progress="{{ progress_width }}">
                                                         <span id="progress-text-{{ event.id }}">{{ event.indexed_photos or 0 }} photos</span>
                                                     </div>
                                                 </div>
-                                                <style>
-                                                    #progress-bar-{{ event.id }} { width: {{ progress_width }}%; }
-                                                </style>
                                                 <div class="progress-info">
                                                     <div class="progress-stats">
                                                         <div class="stat-item">
@@ -803,13 +800,10 @@
                                         {% set progress_width = ((event.indexed_photos / (event.indexed_photos + 1)) * 100) | round(1) if event.indexed_photos and event.indexed_photos > 0 else 0 %}
                                         <div style="margin-bottom: 1rem;">
                                             <div class="progress-container">
-                                                <div class="progress-bar" id="progress-bar-paused-{{ event.id }}">
+                                                <div class="progress-bar" id="progress-bar-paused-{{ event.id }}" data-progress="{{ progress_width }}">
                                                     {{ event.indexed_photos or 0 }} photos
                                                 </div>
                                             </div>
-                                            <style>
-                                                #progress-bar-paused-{{ event.id }} { width: {{ progress_width }}%; }
-                                            </style>
                                             <div class="progress-info">
                                                 <div class="progress-stats">
                                                     <div class="stat-item">
@@ -1310,6 +1304,11 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Set progress bar widths from data-progress attributes
+            document.querySelectorAll('.progress-bar[data-progress]').forEach(bar => {
+                bar.style.width = bar.dataset.progress + '%';
+            });
+
             // Check for in-progress tasks and update progress in real-time
             const statusDivs = document.querySelectorAll('[data-event-id]');
             statusDivs.forEach(div => {
