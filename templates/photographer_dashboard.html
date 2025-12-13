@@ -767,7 +767,8 @@
                                             <!-- Progress Info -->
                                             <div style="margin-bottom: 1rem;">
                                                 <div class="progress-container">
-                                                    <div class="progress-bar" style="width: {% if event.indexed_photos and event.indexed_photos > 0 %}{{ ((event.indexed_photos / (event.indexed_photos + 1)) * 100) | round(1) }}{% else %}0{% endif %}%" id="progress-bar-{{ event.id }}">
+                                                    {% set progress_width = ((event.indexed_photos / (event.indexed_photos + 1)) * 100) | round(1) if event.indexed_photos and event.indexed_photos > 0 else 0 %}
+                                                    <div class="progress-bar" style="width: {{ progress_width }}%" id="progress-bar-{{ event.id }}">
                                                         <span id="progress-text-{{ event.id }}">{{ event.indexed_photos or 0 }} photos</span>
                                                     </div>
                                                 </div>
@@ -798,7 +799,8 @@
                                         <!-- Show Progress -->
                                         <div style="margin-bottom: 1rem;">
                                             <div class="progress-container">
-                                                <div class="progress-bar" style="width: {% if event.indexed_photos and event.indexed_photos > 0 %}{{ ((event.indexed_photos / (event.indexed_photos + 1)) * 100) | round(1) }}{% else %}0{% endif %}%">
+                                                {% set progress_width = ((event.indexed_photos / (event.indexed_photos + 1)) * 100) | round(1) if event.indexed_photos and event.indexed_photos > 0 else 0 %}
+                                                <div class="progress-bar" style="width: {{ progress_width }}%">
                                                     {{ event.indexed_photos or 0 }} photos
                                                 </div>
                                             </div>
